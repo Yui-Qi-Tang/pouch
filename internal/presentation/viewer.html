@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Pouch · Path explorer</title>
+<style>
+:root{font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172c39;background:#eef2f4;--accent:#166e75;--line:#d9e2e6;--muted:#536b78}*{box-sizing:border-box}body{margin:0}header{background:#163847;color:#fff;padding:28px max(24px,calc((100% - 1360px)/2));border-bottom:5px solid #70c7b3}header .top{display:flex;justify-content:space-between;gap:20px;align-items:center}h1{font-size:30px;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:15px;margin:14px 0 8px}.eyebrow{letter-spacing:.13em;font-size:11px;font-weight:700;text-transform:uppercase;color:#a8dace}.subtitle{color:#d2e4eb;overflow-wrap:anywhere;margin:6px 0 0}main{max-width:1400px;margin:auto;padding:22px;display:grid;gap:18px}.card{background:white;border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0;box-shadow:0 3px 13px #16384707}.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.overview{display:flex;gap:24px;flex-wrap:wrap}.stat strong{display:block;font-size:24px}.stat span{font-size:12px;color:var(--muted)}.notice{padding:10px 13px;border-left:4px solid #be8c35;background:#fff8e7;margin-top:14px}.muted{color:var(--muted)}.pill{padding:5px 10px;border-radius:20px;background:#e4f3ed;color:#145845;font-size:12px;font-weight:700;display:inline-block}.pill.warn{background:#fff0d3;color:#795215}.toolbar{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin-bottom:16px}label{display:grid;gap:4px;font-size:12px;font-weight:650}select,button{font:inherit;border:1px solid #becfd7;border-radius:7px;background:white;padding:8px 12px;color:#173744}select{min-width:170px;max-width:100%}button{cursor:pointer}button:hover{background:#edf7f5}button:disabled{opacity:.4;cursor:default}.primary{background:#dff2eb;border-color:#95cebb}input[type=range]{accent-color:var(--accent);min-width:160px;width:100%}.slider{flex:1;min-width:180px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #e5ecef;vertical-align:top;overflow-wrap:anywhere}th{font-size:11px;color:#46606d;letter-spacing:.03em;text-transform:uppercase;background:#f6f9fa}tr.changed td{background:#edf8f3}tr.active td{background:#dcefeb;font-weight:650}.scroll{overflow:auto;max-height:460px}pre,code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}pre{margin:0;padding:12px;background:#f4f7f8;border-radius:7px;white-space:pre-wrap;overflow-wrap:anywhere}details{margin-top:12px}summary{cursor:pointer;font-weight:650;padding:7px 0}a{color:#11636e}.svgbox{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fafcfd}svg{display:block;min-width:100%}.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:9px 0}.key{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:#246d76}.small{font-size:12px}ul{padding-left:20px}li{margin-bottom:7px;overflow-wrap:anywhere}.hash{font-family:ui-monospace,monospace;font-size:11px;color:#59717b;overflow-wrap:anywhere}.empty{padding:30px 10px;color:var(--muted);text-align:center}.stepname{font-size:17px;font-weight:700;margin-bottom:10px}footer{font-size:12px;color:var(--muted);padding:0 24px 25px;text-align:center}@media(max-width:850px){.grid{grid-template-columns:1fr}main{padding:12px}.card{padding:15px}header{padding:20px}header .top{align-items:start;flex-direction:column}.toolbar{gap:9px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<header><div class="top"><div><div class="eyebrow">Evidence · bounded search · replay</div><h1>Pouch path explorer</h1><p id="request" class="subtitle"></p></div><button id="download" class="primary">Download AI bundle · JSON</button></div></header>
+<main>
+<section class="card"><div id="status" class="pill"></div><p id="scope" class="muted"></p><div id="stats" class="overview"></div><div id="qualification" class="notice"></div><details><summary>Bound identity and diagnostics</summary><pre id="identity"></pre></details></section>
+<section class="card"><h2>Solution paths and model recovery</h2><div class="toolbar"><label>Forward path<select id="path"></select></label><label>Direction<select id="direction"><option value="forward">Forward</option><option value="return">Separate return</option></select></label><button id="previous" aria-label="Previous state">← Previous</button><label class="slider">State <span id="step-label"></span><input id="step" type="range" min="0" max="0" value="0"></label><button id="next" aria-label="Next state">Next →</button></div><div id="path-summary" aria-live="polite"></div><p id="path-status" class="small muted"></p><div id="path-graph" class="svgbox"></div><div class="legend"><span><i class="key"></i>Current state</span><span>Each arrow is one declared operation</span><span>Click a state to replay it</span></div></section>
+<div class="grid"><section class="card"><h2>State evolution</h2><div id="step-name" class="stepname"></div><div class="scroll"><table><thead><tr><th>Field</th><th>Original forward start</th><th>Baseline</th><th>Previous</th><th>Current</th><th>Δ baseline</th></tr></thead><tbody id="state-body"></tbody></table></div><h3 id="goal-title">Selected query and baseline</h3><pre id="goal"></pre></section><section class="card"><h2>Operation at this step</h2><p class="small muted">Declared rules determine this transition. Evidence links alone are not action guards.</p><pre id="operation"></pre><h3>Basis for the selected operation</h3><div id="operation-basis"></div><h3>Declared assumptions and scope</h3><p class="small muted">Kinds such as source_supported are labels from the supplied declaration, not new source verification.</p><div id="assumptions"></div><div id="declaration-notices" class="small muted"></div><details><summary>Exact bound assumption text · unchanged</summary><pre id="assumptions-raw"></pre></details></section></div>
+<section class="card"><h2>Operation matrices</h2><p class="small muted">Rows are declared operations. Guard and effect columns are categorical coordinates; frame columns are unchanged fields. The operation leading into the selected state is highlighted.</p><details open><summary>Guard</summary><div id="guard" class="scroll"></div></details><details><summary>Effect</summary><div id="effect" class="scroll"></div></details><details><summary>Frame</summary><div id="frame" class="scroll"></div></details></section>
+<section class="card"><h2 id="evidence-title">Evidence and source records</h2><p id="evidence-scope" class="muted"></p><div id="evidence-graph" class="svgbox"></div><p class="small muted">Evidence topology stays separate from the evolving execution state. Selecting a node or edge shows its preserved record; no per-rule source mapping is inferred.</p><pre id="evidence-record"></pre><details><summary>Evidence incidence matrices and preserved metadata</summary><pre id="evidence-matrix"></pre></details></section>
+<div class="grid"><section class="card"><h2>Original source bindings</h2><p class="small muted">Source and verification links require the companion files in the original output directory. Sharing this HTML alone does not include those files. Preserved source records can be inspected in the source/evidence panel above and in the AI bundle; they do not replace every linked artifact. Hashes bind the frozen input; they do not certify its meaning.</p><ul id="sources"></ul><details open><summary>Declared operation references</summary><p class="small muted">These references are copied from the original declaration. They do not infer evidence edges or prove that a source supports a rule.</p><div id="rule-basis"></div></details></section><section class="card"><h2>Verification and solver evidence</h2><pre id="receipt"></pre><div id="artifacts"></div><details><summary>Path-set check and query ledger</summary><pre id="ledger"></pre></details></section></div>
+</main><footer>Offline viewer · same result bundle as the AI export · model conclusions remain conditional</footer>
+<script id="pouch-bundle" type="application/json">__POUCH_BUNDLE_JSON__</script>
+<script id="pouch-view-details" type="application/json">__POUCH_VIEW_DETAILS_JSON__</script>
+<script>
+'use strict';
+const bundleText=document.getElementById('pouch-bundle').textContent;
+const bundle=JSON.parse(bundleText);
+const details=JSON.parse(document.getElementById('pouch-view-details').textContent);
+const byId=id=>document.getElementById(id), pretty=value=>JSON.stringify(value,null,2), paths=bundle.search.forward||[], contract=bundle.contract, matrix=bundle.search.matrix;
+let chosen=0, direction='forward', step=0;
+function text(id,value){byId(id).textContent=value;}
+function clear(node){node.replaceChildren();}
+function element(tag,content,attrs={}){const node=document.createElement(tag);if(content!==undefined)node.textContent=content;for(const [key,value] of Object.entries(attrs))node.setAttribute(key,String(value));return node;}
+function artifactLink(name,label){const link=element('a',label||name);link.href=name.split('/').map(encodeURIComponent).join('/');link.rel='noreferrer';return link;}
+function svgElement(tag,attrs={},content){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value] of Object.entries(attrs))node.setAttribute(key,String(value));if(content!==undefined)node.textContent=content;return node;}
+function badgeStat(value,label){const box=element('div',undefined,{class:'stat'});box.append(element('strong',value),element('span',label));byId('stats').append(box);}
+function sourceLabel(source){return (details.source_names[source.id]||[]).join(' / ')||source.id;}
+function addSourceRow(list,source){
+  const row=element('li');
+  row.append(artifactLink(source.file,sourceLabel(source)),element('div',source.id,{class:'small'}),element('div',source.sha256,{class:'hash'}));
+  list.append(row);
+}
+function renderAssumptions(){
+  const box=byId('assumptions');clear(box);
+  for(const item of details.assumptions){
+    const entry=element('div');
+    entry.append(element('h3',item.id),element('span','Declared kind: '+(item.kind||'unspecified'),{class:'pill warn'}),element('p',item.statement));
+    entry.append(element('p','Declared basis: '+((item.basis||[]).join(', ')||'none supplied'),{class:'small muted'}));
+    box.append(entry);
+  }
+  for(const [name,value] of Object.entries(details.other_assumptions)){
+    const entry=element('details');entry.append(element('summary',name),element('pre',value));box.append(entry);
+  }
+  if(!details.assumptions.length&&!Object.keys(details.other_assumptions).length)box.append(element('p','No assumptions were supplied.'));
+  const notices=byId('declaration-notices');clear(notices);
+  for(const notice of details.notices)notices.append(element('p',notice));
+  text('assumptions-raw',pretty(contract.assumptions));
+  const basis=byId('rule-basis');clear(basis);
+  const table=element('table'),head=element('thead'),heading=element('tr'),body=element('tbody');
+  for(const title of ['Operation','Declared references'])heading.append(element('th',title));
+  head.append(heading);table.append(head);
+  for(const action of contract.model.actions){
+    const row=element('tr');row.append(element('td',action.id),element('td',(details.action_basis[action.id]||[]).join(', ')||'No references supplied'));body.append(row);
+  }
+  table.append(body);basis.append(table);
+}
+function renderOperationBasis(actionID){
+  const box=byId('operation-basis');clear(box);
+  if(!actionID){box.append(element('p','Select a state after an operation to inspect its declared basis.',{class:'small muted'}));return;}
+  const refs=details.action_basis[actionID]||[];
+  if(!refs.length){box.append(element('p','No per-operation references were supplied. Source bindings alone do not establish this rule.',{class:'small muted'}));return;}
+  const list=element('ul');
+  for(const ref of refs){
+    const row=element('li'),assumption=details.assumptions.find(item=>item.id===ref);
+    row.append(element('strong',ref));
+    if(assumption){row.append(element('p',assumption.statement),element('span','Declared kind: '+assumption.kind,{class:'small muted'}));}
+    else{
+      const source=(bundle.sources.sources||[]).find(item=>item.id===ref||(details.source_names[item.id]||[]).includes(ref));
+      if(source)row.append(element('span',' · '),artifactLink(source.file,sourceLabel(source)));
+      else row.append(element('p','Reference retained as declared; no direct source-file mapping was supplied.',{class:'small muted'}));
+    }
+    list.append(row);
+  }
+  box.append(list);
+}
+function pathResult(){return (bundle.paths||[]).find(p=>p.id===(paths[chosen]||{}).id);}
+function pathDetails(){return details.paths[(paths[chosen]||{}).id]||null;}
+function currentTrace(){const path=paths[chosen];if(!path)return null;if(direction==='forward')return path.trace;return (pathResult()||{}).return||null;}
+function currentAction(trace){return trace&&step>0 ? trace.actions[step-1] : null;}
+function viewURL(){const query=new URLSearchParams({path:(paths[chosen]||{}).id||'',direction,step:String(step)});history.replaceState(null,'','#'+query.toString());}
+function readURL(){const query=new URLSearchParams(location.hash.slice(1));const i=paths.findIndex(p=>p.id===query.get('path'));if(i>=0)chosen=i;direction=query.get('direction')==='return'?'return':'forward';step=Math.max(0,Number(query.get('step'))||0);}
+function renderPathSummary(){
+  const box=byId('path-summary');clear(box);
+  const view=pathDetails(),p=pathResult();
+  if(!view){box.append(element('p','No path selected.'));return;}
+  const cost=value=>value===null?'not certified':value+' model operations';
+  let returnCost=cost(view.return_cost);
+  if(view.return_cost===null&&p&&p.recovery_status==='NO_RETURN_IN_MODEL')returnCost='no legal return in this model; cost not applicable';
+  box.append(element('p','Forward: '+cost(view.forward_cost)+' · Separate return: '+returnCost,{class:'stepname'}));
+  if(view.scenario)box.append(element('p','Declared scenario: '+view.scenario));
+  if(view.note)box.append(element('p','Example interpretation: '+view.note,{class:'notice'}));
+  box.append(element('p','Costs count declared unit-cost model operations, not time, money or real-world restoration effort.',{class:'small muted'}));
+  const scope=element('div',undefined,{class:'notice'});
+  scope.append(element('strong','Model recovery scope'));
+  scope.append(element('p','The separate return starts from the complete forward endpoint and targets every baseline field. It is not a return from the currently selected replay step.'));
+  const statements=view.return_assumptions||[];
+  for(const item of statements)scope.append(element('p',item.id+' ['+item.kind+']: '+item.statement));
+  if(!statements.length)scope.append(element('p','No return-specific assumption text was resolved. Inspect the declared operations and assumptions; no external restoration scope is inferred.'));
+  box.append(scope);
+}
+function renderQuery(){
+  const view=pathDetails();
+  text('goal-title',direction==='return'?'Separate return query · target: complete baseline':'Forward query · target: declared Goal');
+  text('goal',pretty({direction,original_forward_start:contract.start,selected_query_start:view?view[direction].start:(direction==='forward'?contract.start:null),selected_query_goal:direction==='return'?contract.baseline:contract.goal,baseline:contract.baseline}));
+}
+function renderState(trace,actionID){const body=byId('state-body');clear(body);const now=trace?(trace.states[step]||{}):(direction==='forward'?contract.start:{}), previous=trace&&step>0?trace.states[step-1]:now;const fields=Object.keys(contract.model.fields).sort();for(const field of fields){const tr=element('tr');if(previous[field]!==now[field])tr.className='changed';for(const value of [field,contract.start[field],contract.baseline[field],previous[field],now[field],now[field]===undefined?'—':now[field]===contract.baseline[field]?'=':'changed'])tr.append(element('td',value===undefined?'—':value));body.append(tr);}text('step-name',trace?(step===0?(direction==='forward'?'Initial state':'Return starts at the forward endpoint'):'After '+actionID):'No trace to replay');const action=contract.model.actions.find(a=>a.id===actionID);text('operation',action?pretty(action):(trace?'No operation has executed at state 0.':'No checked trace is available for this direction.'));}
+function drawPath(trace){const box=byId('path-graph');clear(box);if(!trace){box.append(element('div',direction==='return'?'No verified return witness is available. See recovery status and evidence below.':'No forward witness was found in the reported scope.',{class:'empty'}));return;}const width=Math.max(760,trace.states.length*210), height=180;const svg=svgElement('svg',{viewBox:'0 0 '+width+' '+height,width,height,role:'img','aria-label':'Selected execution trace'});trace.states.forEach((state,i)=>{const x=100+i*210;if(i>0){svg.append(svgElement('line',{x1:x-165,y1:76,x2:x-45,y2:76,stroke:'#a2b7be','stroke-width':2}),svgElement('path',{d:'M '+(x-53)+' 71 L '+(x-45)+' 76 L '+(x-53)+' 81',fill:'none',stroke:'#a2b7be','stroke-width':2}));const action=svgElement('text',{x:x-105,y:48,'text-anchor':'middle','font-size':11,fill:'#49636f'},trace.actions[i-1]);action.append(svgElement('title',{},trace.actions[i-1]));svg.append(action);}const group=svgElement('g',{tabindex:0,role:'button','aria-label':'Replay state '+i,style:'cursor:pointer'});group.append(svgElement('circle',{cx:x,cy:76,r:29,fill:i===step?'#246d76':'#e8eff2',stroke:i===step?'#163e45':'#b7cad2','stroke-width':2}),svgElement('text',{x,y:81,'text-anchor':'middle',fill:i===step?'white':'#234956','font-size':15,'font-weight':700},String(i)),svgElement('text',{x,y:126,'text-anchor':'middle','font-size':11,fill:'#526d78'},Object.keys(state).sort().map(k=>state[k]).join(' · ').slice(0,48)));group.append(svgElement('title',{},pretty(state)));const activate=()=>{step=i;update();};group.addEventListener('click',activate);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});svg.append(group);});box.append(svg);}
+function matrixTable(target,headers,rows,active){const box=byId(target);clear(box);const table=element('table'), head=element('thead'), heading=element('tr');for(const value of ['Action',...headers])heading.append(element('th',value));head.append(heading);table.append(head);const body=element('tbody');(matrix.action_ids||[]).forEach((id,i)=>{const tr=element('tr');if(id===active)tr.className='active';tr.append(element('td',id));for(const value of rows[i]||[])tr.append(element('td',String(value)));body.append(tr);});table.append(body);box.append(table);}
+function renderReceipt(){const p=pathResult();text('receipt',p?pretty({forward_verified:p.forward_verified,recovery_status:p.recovery_status,reason:p.reason||null,receipt:p.receipt}):'No path receipt exists. A search status is not an accepted witness.');const node=byId('artifacts');clear(node);if(p){for(const [name,label] of [[p.package_file,'Validated package'],[p.closure_file,'Complete reachable-state closure']])if(name){const row=element('p');row.append(artifactLink(name,label));node.append(row);}}}
+function update(){const trace=currentTrace();step=trace?Math.min(Math.floor(step),trace.states.length-1):0;byId('path').value=String(chosen);byId('direction').value=direction;byId('step').max=String(trace?trace.states.length-1:0);byId('step').value=String(step);byId('step').disabled=!trace;byId('previous').disabled=!trace||step===0;byId('next').disabled=!trace||step===trace.states.length-1;text('step-label',trace?step+' / '+(trace.states.length-1):'—');const p=pathResult();text('path-status',p?'Forward replay: '+(p.forward_verified?'verified':'not verified')+' · Model recovery: '+p.recovery_status+(p.reason?' · '+p.reason:''):'No checked path selected');renderPathSummary();renderQuery();const action=currentAction(trace);renderState(trace,action);renderOperationBasis(action);drawPath(trace);const coords=(matrix.coordinates||[]).map(c=>c.field+' = '+c.value);matrixTable('guard',coords,matrix.guard||[],action);matrixTable('effect',coords,matrix.effect||[],action);matrixTable('frame',matrix.fields||[],matrix.frame||[],action);renderReceipt();viewURL();}
+function drawEvidence(){
+const m=bundle.evidence_matrix,box=byId('evidence-graph');clear(box);text('evidence-scope',bundle.evidence_scope);
+text('evidence-title',details.topology_supplied?'Evidence relationships · supplied snapshot':'Source records · relationships not supplied');
+text('evidence-matrix',m?pretty(m):'No evidence matrix.');
+if(!details.topology_supplied){
+  box.append(element('div','Only source records were supplied. Relationships are unknown; this list is not a graph of independent evidence.',{class:'notice'}));
+  const records=m?(m.node_records||[]):[];
+  if(records.length){
+    const list=element('ul');
+    records.forEach((record,i)=>{
+      const id=(m.node_ids||[])[i]||record.id;
+      const source=(bundle.sources.sources||[]).find(item=>item.id===id);
+      const row=element('li'),button=element('button',source?sourceLabel(source):id);
+      button.addEventListener('click',()=>text('evidence-record',pretty(record)));
+      row.append(button,element('div',id,{class:'small muted'}));list.append(row);
+    });box.append(list);
+  }else box.append(element('p','See the bound source files below.'));
+  text('evidence-record',m?pretty({snapshot_id:m.snapshot_id,metadata:m.metadata}):'Unknown topology is not an empty-world claim.');
+  return;
+}
+const ids=m.node_ids||[], edgeIDs=m.edge_ids||[];if(!ids.length){box.append(element('div','The supplied graph contains no nodes.',{class:'empty'}));return;}const width=Math.max(760,Math.ceil(Math.sqrt(ids.length))*180),height=Math.max(280,Math.ceil(ids.length/Math.ceil(Math.sqrt(ids.length)))*120),cols=Math.ceil(Math.sqrt(ids.length));const points=ids.map((_,i)=>({x:90+(i%cols)*180,y:70+Math.floor(i/cols)*120}));const svg=svgElement('svg',{viewBox:'0 0 '+width+' '+height,width,height,role:'img','aria-label':'Original evidence graph'});const defs=svgElement('defs'),marker=svgElement('marker',{id:'evidence-arrow',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'});marker.append(svgElement('path',{d:'M 0 0 L 10 5 L 0 10 z',fill:'#88a3ad'}));defs.append(marker);svg.append(defs);edgeIDs.forEach((id,j)=>{const source=(m.source||[]).findIndex(row=>row[j]===1),target=(m.target||[]).findIndex(row=>row[j]===1);if(source<0||target<0)return;const a=points[source],b=points[target],relation=Object.keys(m.relation_masks||{}).find(r=>m.relation_masks[r][j]===1)||'unknown',dx=b.x-a.x,dy=b.y-a.y,distance=Math.hypot(dx,dy)||1,sx=a.x+24*dx/distance,sy=a.y+24*dy/distance,tx=b.x-26*dx/distance,ty=b.y-26*dy/distance;const path=svgElement('path',{d:source===target?'M '+(a.x-15)+' '+(a.y-17)+' C '+(a.x-80)+' '+(a.y-85)+' '+(a.x+80)+' '+(a.y-85)+' '+(a.x+15)+' '+(a.y-17):'M '+sx+' '+sy+' Q '+((a.x+b.x)/2+((j%3)-1)*24)+' '+((a.y+b.y)/2-22)+' '+tx+' '+ty,fill:'none',stroke:'#88a3ad','stroke-width':2,'marker-end':'url(#evidence-arrow)',style:'cursor:pointer'});path.append(svgElement('title',{},id+' · '+relation+' · '+ids[source]+' → '+ids[target]));path.addEventListener('click',()=>text('evidence-record',pretty({id,from:ids[source],to:ids[target],relation,attributes:(m.edge_records[j]||{}).attributes})));svg.append(path);if(source!==target){const label=svgElement('text',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-14-(j%3)*10,'text-anchor':'middle','font-size':9,fill:'#526d78'},relation.length>24?relation.slice(0,21)+'…':relation);label.append(svgElement('title',{},id+' · '+relation));svg.append(label);}});ids.forEach((id,i)=>{const p=points[i],group=svgElement('g',{tabindex:0,role:'button','aria-label':'Evidence node '+id,style:'cursor:pointer'});group.append(svgElement('circle',{cx:p.x,cy:p.y,r:24,fill:'#dfeef0',stroke:'#5b919c','stroke-width':2}),svgElement('text',{x:p.x,y:p.y+5,'text-anchor':'middle','font-size':12,fill:'#214b57'},String(i+1)),svgElement('text',{x:p.x,y:p.y+46,'text-anchor':'middle','font-size':11,fill:'#214b57'},id.length>22?id.slice(0,19)+'…':id));group.append(svgElement('title',{},id));const show=()=>text('evidence-record',pretty(m.node_records[i]));group.addEventListener('click',show);group.addEventListener('keydown',event=>{if(event.key==='Enter')show();});svg.append(group);});box.append(svg);text('evidence-record',pretty({snapshot_id:m.snapshot_id,source_sha256:m.source_sha256,metadata:m.metadata}));}
+text('request',bundle.request_id);text('status',bundle.status+(bundle.complete?' · verification complete':' · verification incomplete'));if(!bundle.complete)byId('status').classList.add('warn');text('scope','Forward enumeration limit: 0…'+contract.forward_limit+' · Separate return search cap: 0…'+contract.return_limit+' · '+bundle.search.policy);badgeStat(paths.length,'forward witnesses');badgeStat(bundle.search.queries.length,'solver queries');badgeStat((bundle.paths||[]).filter(p=>p.recovery_status==='RETURN_VERIFIED').length,'paths with verified model returns');badgeStat((bundle.paths||[]).filter(p=>p.recovery_status==='NO_RETURN_IN_MODEL').length,'model no-return conclusions');text('qualification','Conditional model conclusions. Forward enumeration '+(bundle.search.forward_complete?'exhausted the declared length range.':'is incomplete; additional paths may exist.')+' Return searches are separate queries: a saved return witness does not enumerate all return paths within the cap. Model assumptions and source truth are not established by SAT.');text('identity',pretty({schema_version:bundle.schema_version,project_version:bundle.project_version,request_id:bundle.request_id,authority_sha256:bundle.authority_sha256,conclusion_kind:bundle.conclusion_kind,observed_fact:bundle.observed_fact,native_ahe_receipt:bundle.native_ahe_receipt,diagnostics:bundle.diagnostics}));renderAssumptions();text('ledger',pretty({set_check:bundle.set_check,queries:bundle.search.queries}));for(const source of bundle.sources.sources||[])addSourceRow(byId('sources'),source);paths.forEach((path,i)=>byId('path').append(element('option',path.id+((details.paths[path.id]||{}).scenario?' · '+details.paths[path.id].scenario:'')+' · '+path.trace.actions.length+' model operations',{value:i})));if(!paths.length){byId('path').append(element('option','No forward paths',{value:0}));byId('path').disabled=true;}byId('path').addEventListener('change',()=>{chosen=Number(byId('path').value);step=0;update();});byId('direction').addEventListener('change',()=>{direction=byId('direction').value;step=0;update();});byId('step').addEventListener('input',()=>{step=Number(byId('step').value);update();});byId('previous').addEventListener('click',()=>{step--;update();});byId('next').addEventListener('click',()=>{step++;update();});byId('download').addEventListener('click',()=>{const blob=new Blob([bundleText+'\n'],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='pouch-bundle.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});window.addEventListener('hashchange',()=>{readURL();update();});readURL();drawEvidence();update();
+</script>
+</body></html>

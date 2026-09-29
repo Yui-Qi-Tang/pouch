@@ -1,0 +1,231 @@
+{
+  "schema_version": "pouch-finite-validation/v1",
+  "request_id": "pouch-core-20260929-02/django-13344",
+  "source_binding": {
+    "canon-node:0225b2607934a30d": "54520653998715c49c5c2d38bbcd6d2e02a601c9168edadd722e5eda0ff2cc94",
+    "canon-node:0e99350a33da0422": "fa0d64caaae3c17b9e52c447593c2c8ac3354046b1df2ceb293645b293b06090",
+    "canon-node:107cb81e8b993612": "1a542d602bfd3f770b32d92e0e0a2d0b428363e456146cd390bffe9c86b74bcd",
+    "canon-node:17bbb8a9925af4c4": "ce0ca804a155ada95c5838a0f3f7fd7e56f06d2a736c288c59b6a4026bfdceac",
+    "canon-node:258d1cd945beb958": "10f61d78f37fb02ad309563aae9a316988348c48321e942500478b304c7951e6",
+    "canon-node:2f68ef79298040fe": "7d6d79b538a6efe1c07ad0a163ee5a87258376f579471a2b6cd0d92ad4bd441a",
+    "canon-node:5d7fc415d2910a4a": "00f9cb4cf497fb5caf7b11e25386437e8cd496b26cb91a715d951a93251875a0"
+  },
+  "assumptions": {
+    "complete_original_declaration": "{\"actions\":[{\"basis\":[\"D1\",\"D2\"],\"cost\":1,\"effect\":{\"chain\":\"original_outer\",\"phase\":\"built\"},\"frame\":[\"response\"],\"guard\":{\"phase\":\"empty\"},\"id\":\"build_original_outer\"},{\"basis\":[\"D1\",\"D2\"],\"cost\":1,\"effect\":{\"chain\":\"original_inner\",\"phase\":\"built\"},\"frame\":[\"response\"],\"guard\":{\"phase\":\"empty\"},\"id\":\"build_original_inner\"},{\"basis\":[\"D1\",\"D3\"],\"cost\":1,\"effect\":{\"chain\":\"candidate_outer\",\"phase\":\"built\"},\"frame\":[\"response\"],\"guard\":{\"phase\":\"empty\"},\"id\":\"build_candidate_outer\"},{\"basis\":[\"D1\",\"D2\"],\"cost\":1,\"effect\":{\"phase\":\"observed\",\"response\":\"coroutine\"},\"frame\":[\"chain\"],\"guard\":{\"chain\":\"original_outer\",\"phase\":\"built\"},\"id\":\"observe_unawaited_outer\"},{\"basis\":[\"D1\",\"D2\",\"D4\"],\"cost\":1,\"effect\":{\"phase\":\"view_complete\",\"response\":\"HttpResponse\"},\"frame\":[\"chain\"],\"guard\":{\"chain\":\"original_inner\",\"phase\":\"built\"},\"id\":\"await_view_original_inner\"},{\"basis\":[\"D2\"],\"cost\":1,\"effect\":{\"phase\":\"observed\"},\"frame\":[\"chain\",\"response\"],\"guard\":{\"chain\":\"original_inner\",\"phase\":\"view_complete\"},\"id\":\"observe_original_inner\"},{\"basis\":[\"D1\",\"D2\",\"D4\"],\"cost\":1,\"effect\":{\"phase\":\"view_complete\",\"response\":\"HttpResponse\"},\"frame\":[\"chain\"],\"guard\":{\"chain\":\"candidate_outer\",\"phase\":\"built\"},\"id\":\"await_view_candidate_outer\"},{\"basis\":[\"D2\"],\"cost\":1,\"effect\":{\"phase\":\"observed\"},\"frame\":[\"chain\",\"response\"],\"guard\":{\"chain\":\"candidate_outer\",\"phase\":\"view_complete\"},\"id\":\"observe_candidate_outer\"},{\"basis\":[\"D5\"],\"cost\":1,\"effect\":{\"chain\":\"none\",\"phase\":\"empty\",\"response\":\"none\"},\"frame\":[],\"guard\":{\"phase\":\"observed\"},\"id\":\"clear_staging\"}],\"assumptions\":[{\"basis\":[\"pinned-source-probe\"],\"id\":\"D1\",\"kind\":\"source_supported\",\"statement\":\"BaseHandler builds reversed middleware chain, mode adapters and wrapper selection depend on coroutine markers.\"},{\"basis\":[\"pinned-source-probe\"],\"id\":\"D2\",\"kind\":\"source_supported\",\"statement\":\"Pinned SecurityMiddleware lacks the marker setup performed by MiddlewareMixin; outer Observer sees coroutine, reversed placement sees HttpResponse in actual probe.\"},{\"basis\":[],\"id\":\"D3\",\"kind\":\"declared_candidate\",\"statement\":\"CandidateSecurity calls existing _async_check after base SecurityMiddleware initialization.\"},{\"basis\":[],\"id\":\"D4\",\"kind\":\"scenario_assumption\",\"statement\":\"Finite local terminal view returns the retained 200/local-payload response; no URL routing, ASGI server, socket or DB effects.\"},{\"basis\":[],\"id\":\"D5\",\"kind\":\"scenario_assumption\",\"statement\":\"clear_staging discards this local evaluation binding and observation; it does not undo a request or HTTP side effect.\"}],\"baseline\":{\"chain\":\"none\",\"phase\":\"empty\",\"response\":\"none\"},\"case\":\"django-13344\",\"direct_basis_ids\":[\"django-13344-issue\",\"django-13344-code-0\",\"django-13344-code-1\",\"django-13344-code-2\",\"django-13344-code-3\",\"django-13344-contract\",\"django-13344-model\"],\"domain_forbidden\":[{\"chain\":\"none\",\"phase\":[\"built\",\"view_complete\",\"observed\"]},{\"chain\":[\"original_outer\",\"original_inner\",\"candidate_outer\"],\"phase\":\"empty\"},{\"phase\":[\"empty\",\"built\"],\"response\":[\"coroutine\",\"HttpResponse\"]},{\"phase\":\"view_complete\",\"response\":[\"none\",\"coroutine\"]},{\"phase\":\"observed\",\"response\":\"none\"}],\"fields\":{\"chain\":[\"none\",\"original_outer\",\"original_inner\",\"candidate_outer\"],\"phase\":[\"empty\",\"built\",\"view_complete\",\"observed\"],\"response\":[\"none\",\"coroutine\",\"HttpResponse\"]},\"forward_horizon\":3,\"goals\":{\"forward\":{\"phase\":\"observed\",\"response\":\"HttpResponse\"},\"return\":{\"chain\":\"none\",\"phase\":\"empty\",\"response\":\"none\"}},\"mutations\":[{\"action_id\":\"observe_unawaited_outer\",\"actions\":[\"build_original_outer\",\"observe_unawaited_outer\"],\"expected_mutant_end\":{\"chain\":\"original_outer\",\"phase\":\"observed\",\"response\":\"HttpResponse\"},\"expected_original_rejection\":\"SUCCESSOR_MISMATCH\",\"id\":\"D-M1-unawaited-masquerades-response\",\"original_start\":{\"chain\":\"none\",\"phase\":\"empty\",\"response\":\"none\"},\"override\":{\"effect\":{\"phase\":\"observed\",\"response\":\"HttpResponse\"}},\"rationale\":\"Coroutine callback observation cannot be relabeled as HttpResponse; original rules preserve the real object type.\"}],\"payloads\":{\"source_probe\":{\"candidate_outer\":{\"await_layers\":[\"coroutine\",\"HttpResponse\"],\"events\":[{\"event\":\"async_view\",\"response_type\":\"HttpResponse\"},{\"awaitable\":false,\"event\":\"observer_process_response\",\"response_type\":\"HttpResponse\"}],\"final_response\":{\"body\":\"local-payload\",\"status\":200,\"type\":\"HttpResponse\"},\"handler_coroutine_marked\":true,\"order\":[\"Observer\",\"CandidateSecurity\"]},\"original_inner\":{\"await_layers\":[\"coroutine\",\"HttpResponse\"],\"events\":[{\"event\":\"async_view\",\"response_type\":\"HttpResponse\"},{\"awaitable\":false,\"event\":\"observer_process_response\",\"response_type\":\"HttpResponse\"}],\"final_response\":{\"body\":\"local-payload\",\"status\":200,\"type\":\"HttpResponse\"},\"handler_coroutine_marked\":false,\"order\":[\"Security\",\"Observer\"]},\"original_outer\":{\"await_layers\":[\"coroutine\",\"HttpResponse\"],\"events\":[{\"awaitable\":true,\"event\":\"observer_process_response\",\"response_type\":\"coroutine\"},{\"event\":\"async_view\",\"response_type\":\"HttpResponse\"}],\"final_response\":{\"body\":\"local-payload\",\"status\":200,\"type\":\"HttpResponse\"},\"handler_coroutine_marked\":false,\"order\":[\"Observer\",\"Security\"]}}},\"probe_binding\":{\"artifact_id\":\"case/probe-results.json\",\"scope\":\"preparation source probe; see explicit stubs/dependencies and observed failure branches\",\"sha256\":\"6b18ec1403e673ef0771f9bdb56973cf36391caf6ce773a4b486581801caed4c\"},\"schema_version\":\"pouch-h10-model/v1\",\"scope\":\"Selected pinned middleware adaptation and ordering; stages correspond to observed view/observer events. Not full Django/ASGI or official repair evaluation.\"}",
+    "current_native_source_mapping": "{\"django-13344-code-0\":\"canon-node:258d1cd945beb958\",\"django-13344-code-1\":\"canon-node:2f68ef79298040fe\",\"django-13344-code-2\":\"canon-node:5d7fc415d2910a4a\",\"django-13344-code-3\":\"canon-node:17bbb8a9925af4c4\",\"django-13344-contract\":\"canon-node:0225b2607934a30d\",\"django-13344-issue\":\"canon-node:0e99350a33da0422\",\"django-13344-model\":\"canon-node:107cb81e8b993612\"}"
+  },
+  "model": {
+    "fields": {
+      "chain": [
+        "none",
+        "original_outer",
+        "original_inner",
+        "candidate_outer"
+      ],
+      "phase": [
+        "empty",
+        "built",
+        "view_complete",
+        "observed"
+      ],
+      "response": [
+        "none",
+        "coroutine",
+        "HttpResponse"
+      ]
+    },
+    "forbidden": [
+      {
+        "chain": "none",
+        "phase": "built"
+      },
+      {
+        "chain": "none",
+        "phase": "view_complete"
+      },
+      {
+        "chain": "none",
+        "phase": "observed"
+      },
+      {
+        "chain": "original_outer",
+        "phase": "empty"
+      },
+      {
+        "chain": "original_inner",
+        "phase": "empty"
+      },
+      {
+        "chain": "candidate_outer",
+        "phase": "empty"
+      },
+      {
+        "phase": "empty",
+        "response": "coroutine"
+      },
+      {
+        "phase": "empty",
+        "response": "HttpResponse"
+      },
+      {
+        "phase": "built",
+        "response": "coroutine"
+      },
+      {
+        "phase": "built",
+        "response": "HttpResponse"
+      },
+      {
+        "phase": "view_complete",
+        "response": "none"
+      },
+      {
+        "phase": "view_complete",
+        "response": "coroutine"
+      },
+      {
+        "phase": "observed",
+        "response": "none"
+      }
+    ],
+    "actions": [
+      {
+        "id": "build_original_outer",
+        "guard": {
+          "phase": "empty"
+        },
+        "effect": {
+          "chain": "original_outer",
+          "phase": "built"
+        },
+        "frame": [
+          "response"
+        ]
+      },
+      {
+        "id": "build_original_inner",
+        "guard": {
+          "phase": "empty"
+        },
+        "effect": {
+          "chain": "original_inner",
+          "phase": "built"
+        },
+        "frame": [
+          "response"
+        ]
+      },
+      {
+        "id": "build_candidate_outer",
+        "guard": {
+          "phase": "empty"
+        },
+        "effect": {
+          "chain": "candidate_outer",
+          "phase": "built"
+        },
+        "frame": [
+          "response"
+        ]
+      },
+      {
+        "id": "observe_unawaited_outer",
+        "guard": {
+          "chain": "original_outer",
+          "phase": "built"
+        },
+        "effect": {
+          "phase": "observed",
+          "response": "coroutine"
+        },
+        "frame": [
+          "chain"
+        ]
+      },
+      {
+        "id": "await_view_original_inner",
+        "guard": {
+          "chain": "original_inner",
+          "phase": "built"
+        },
+        "effect": {
+          "phase": "view_complete",
+          "response": "HttpResponse"
+        },
+        "frame": [
+          "chain"
+        ]
+      },
+      {
+        "id": "observe_original_inner",
+        "guard": {
+          "chain": "original_inner",
+          "phase": "view_complete"
+        },
+        "effect": {
+          "phase": "observed"
+        },
+        "frame": [
+          "chain",
+          "response"
+        ]
+      },
+      {
+        "id": "await_view_candidate_outer",
+        "guard": {
+          "chain": "candidate_outer",
+          "phase": "built"
+        },
+        "effect": {
+          "phase": "view_complete",
+          "response": "HttpResponse"
+        },
+        "frame": [
+          "chain"
+        ]
+      },
+      {
+        "id": "observe_candidate_outer",
+        "guard": {
+          "chain": "candidate_outer",
+          "phase": "view_complete"
+        },
+        "effect": {
+          "phase": "observed"
+        },
+        "frame": [
+          "chain",
+          "response"
+        ]
+      },
+      {
+        "id": "clear_staging",
+        "guard": {
+          "phase": "observed"
+        },
+        "effect": {
+          "chain": "none",
+          "phase": "empty",
+          "response": "none"
+        },
+        "frame": []
+      }
+    ]
+  },
+  "start": {
+    "chain": "none",
+    "phase": "empty",
+    "response": "none"
+  },
+  "goal": {
+    "phase": "observed",
+    "response": "HttpResponse"
+  },
+  "baseline": {
+    "chain": "none",
+    "phase": "empty",
+    "response": "none"
+  },
+  "forward_limit": 3,
+  "return_limit": 12
+}

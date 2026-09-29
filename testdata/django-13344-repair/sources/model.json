@@ -1,0 +1,151 @@
+{
+  "schema_version": "pouch-h13-edit-model/v1",
+  "fields": {
+    "edit_0": [
+      "original",
+      "patched"
+    ],
+    "edit_1": [
+      "original",
+      "patched"
+    ],
+    "edit_2": [
+      "original",
+      "patched"
+    ],
+    "source_binding": [
+      "current",
+      "stale"
+    ],
+    "checkpoint": [
+      "present",
+      "missing"
+    ]
+  },
+  "domain_forbidden": [],
+  "actions": [
+    {
+      "id": "apply_0",
+      "guard": {
+        "edit_0": "original",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_0": "patched"
+      },
+      "frame": [
+        "edit_1",
+        "edit_2",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "reverse_0",
+      "guard": {
+        "edit_0": "patched",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_0": "original"
+      },
+      "frame": [
+        "edit_1",
+        "edit_2",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "apply_1",
+      "guard": {
+        "edit_1": "original",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_1": "patched"
+      },
+      "frame": [
+        "edit_0",
+        "edit_2",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "reverse_1",
+      "guard": {
+        "edit_1": "patched",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_1": "original"
+      },
+      "frame": [
+        "edit_0",
+        "edit_2",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "apply_2",
+      "guard": {
+        "edit_2": "original",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_2": "patched"
+      },
+      "frame": [
+        "edit_0",
+        "edit_1",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    },
+    {
+      "id": "reverse_2",
+      "guard": {
+        "edit_2": "patched",
+        "source_binding": "current",
+        "checkpoint": "present"
+      },
+      "effect": {
+        "edit_2": "original"
+      },
+      "frame": [
+        "edit_0",
+        "edit_1",
+        "source_binding",
+        "checkpoint"
+      ],
+      "cost": 1
+    }
+  ],
+  "baseline": {
+    "edit_0": "original",
+    "edit_1": "original",
+    "edit_2": "original",
+    "source_binding": "current",
+    "checkpoint": "present"
+  },
+  "goal": {
+    "edit_0": "patched",
+    "edit_1": "patched",
+    "edit_2": "patched",
+    "source_binding": "current",
+    "checkpoint": "present"
+  },
+  "scope": "Known disjoint file edits, behavior established only by external tests."
+}

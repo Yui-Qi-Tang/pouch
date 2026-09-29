@@ -1,0 +1,7 @@
+{
+  "source_run": "pouch-core-20260929-02",
+  "source_artifact": "experiments/product-integration/20260929/continuous/pouch-core-20260929-02/synthetic-key-rotation",
+  "authority_bytes_unchanged": true,
+  "source_content": "Exact UTF-8 statement_text from historical native readback. Native IDs identify the historical fixture only; new live integration requires fresh reads and explicit rebinding.",
+  "limits": "Finite model regression, not a new official SWE test or physical restore."
+}

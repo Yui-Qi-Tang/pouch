@@ -1,0 +1,143 @@
+{
+  "schema_version": "canonical-evidence-graph/v1",
+  "snapshot_id": "h2-synthetic-20260922-v1",
+  "nodes": [
+    {
+      "id": "raw-policy",
+      "kind": "raw_evidence",
+      "payload_ref": "payload-raw-policy",
+      "provenance_ref": "synthetic-provenance",
+      "temporal_ref": "synthetic-temporal",
+      "integrity_ref": "integrity-raw-policy"
+    },
+    {
+      "id": "rule",
+      "kind": "source_claim",
+      "payload_ref": "payload-rule",
+      "provenance_ref": "synthetic-provenance",
+      "temporal_ref": "synthetic-temporal",
+      "integrity_ref": "integrity-rule"
+    },
+    {
+      "id": "permit",
+      "kind": "source_claim",
+      "payload_ref": "payload-permit",
+      "provenance_ref": "synthetic-provenance",
+      "temporal_ref": "synthetic-temporal",
+      "integrity_ref": "integrity-permit"
+    },
+    {
+      "id": "water_ok",
+      "kind": "source_claim",
+      "payload_ref": "payload-water_ok",
+      "provenance_ref": "synthetic-provenance",
+      "temporal_ref": "synthetic-temporal",
+      "integrity_ref": "integrity-water_ok"
+    }
+  ],
+  "edges": [
+    {
+      "id": "supports-rule",
+      "from": "raw-policy",
+      "to": "rule",
+      "relation": "supports_claim",
+      "provenance_ref": "synthetic-provenance"
+    },
+    {
+      "id": "supports-permit",
+      "from": "raw-policy",
+      "to": "permit",
+      "relation": "supports_claim",
+      "provenance_ref": "synthetic-provenance"
+    },
+    {
+      "id": "supports-water_ok",
+      "from": "raw-policy",
+      "to": "water_ok",
+      "relation": "supports_claim",
+      "provenance_ref": "synthetic-provenance"
+    }
+  ],
+  "payloads": [
+    {
+      "id": "payload-raw-policy",
+      "source_type": "synthetic_simulation_policy",
+      "title": "Synthetic H2 feeding policy: raw-policy",
+      "source": "synthetic://pouch/h2/feed-policy/v1",
+      "span": "In this simulation, feed is enabled if and only if permit AND water_ok. Feeding sets fed to true and leaves permit and water_ok unchanged.\npermit denotes whether the simulation grants permission to feed.\nwater_ok denotes whether the simulated water condition is acceptable for feeding.",
+      "span_locator": "lines:1-3",
+      "applicability": "Offline H2 simulation only; synthetic fixture, not admitted evidence or an observed condition."
+    },
+    {
+      "id": "payload-rule",
+      "source_type": "synthetic_simulation_policy",
+      "title": "Synthetic H2 feeding policy: rule",
+      "source": "synthetic://pouch/h2/feed-policy/v1",
+      "span": "In this simulation, feed is enabled if and only if permit AND water_ok. Feeding sets fed to true and leaves permit and water_ok unchanged.",
+      "span_locator": "line:1",
+      "claim": "In this simulation, feed is enabled if and only if permit AND water_ok. Feeding sets fed to true and leaves permit and water_ok unchanged.",
+      "applicability": "Offline H2 simulation only; synthetic fixture, not admitted evidence or an observed condition."
+    },
+    {
+      "id": "payload-permit",
+      "source_type": "synthetic_simulation_policy",
+      "title": "Synthetic H2 feeding policy: permit",
+      "source": "synthetic://pouch/h2/feed-policy/v1",
+      "span": "permit denotes whether the simulation grants permission to feed.",
+      "span_locator": "line:2",
+      "claim": "permit denotes whether the simulation grants permission to feed.",
+      "applicability": "Offline H2 simulation only; synthetic fixture, not admitted evidence or an observed condition."
+    },
+    {
+      "id": "payload-water_ok",
+      "source_type": "synthetic_simulation_policy",
+      "title": "Synthetic H2 feeding policy: water_ok",
+      "source": "synthetic://pouch/h2/feed-policy/v1",
+      "span": "water_ok denotes whether the simulated water condition is acceptable for feeding.",
+      "span_locator": "line:3",
+      "claim": "water_ok denotes whether the simulated water condition is acceptable for feeding.",
+      "applicability": "Offline H2 simulation only; synthetic fixture, not admitted evidence or an observed condition."
+    }
+  ],
+  "provenance": [
+    {
+      "id": "synthetic-provenance",
+      "origin_refs": [
+        "synthetic://pouch/h2/feed-policy/v1"
+      ],
+      "origin_group_id": "synthetic-feed-policy-v1",
+      "producer": "codex-h2-fixture-author",
+      "method": "explicit-synthetic-fixture",
+      "method_version": "1",
+      "trace_ref": "preparation/fixture-sealing.json"
+    }
+  ],
+  "temporal": [
+    {
+      "id": "synthetic-temporal",
+      "status": "unknown"
+    }
+  ],
+  "integrity": [
+    {
+      "id": "integrity-raw-policy",
+      "algorithm": "sha256",
+      "digest": "422d3779daa56073218aa6f7f8286804eb4f1247ee718248fc57aea33c9a8136"
+    },
+    {
+      "id": "integrity-rule",
+      "algorithm": "sha256",
+      "digest": "b719896fd7d5e37d2c15ffa1d5cc0a98d436e2ca0274217758c27ba8c33d25e8"
+    },
+    {
+      "id": "integrity-permit",
+      "algorithm": "sha256",
+      "digest": "c6e9125110e251b0aedfe018d84cb0350d339be8ec8f4dffa3da9cb4b5d4ff0a"
+    },
+    {
+      "id": "integrity-water_ok",
+      "algorithm": "sha256",
+      "digest": "cf65daaec16cdb015755576a956119c375c4bdbe4b99d41b6cf4966deca658d2"
+    }
+  ]
+}

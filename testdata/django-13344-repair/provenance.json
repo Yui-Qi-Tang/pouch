@@ -1,0 +1,122 @@
+{
+  "schema_version": "pouch-h13-import/v1",
+  "lab_run": "h13-20260927-13",
+  "restore_run": "h13-restore-20260928-02",
+  "restore_reviewed_status": "FAIL",
+  "restore_reason": "CONTROL_REPRODUCTION_MISMATCH",
+  "authority_sha256": "69e7489f7174cab01be065d3e515f87a2cde279681ffe58898d22f56cb0d4f78",
+  "conversion": [
+    "domain_forbidden renamed forbidden",
+    "unit cost 1 represented by Go action count; other costs not supported",
+    "baseline copied into start; forward/return limits 3",
+    "all guards/effects/frames/field values/baseline/Goal preserved",
+    "source records only; no AHE topology or native admission claimed"
+  ],
+  "files": [
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/model.json",
+      "fixture_file": "sources/model.json",
+      "sha256": "6a8fa1ac52ba6ac99df474c779fa51fc377ef089dc4f8e5f409b137f9ed34644",
+      "bytes": 2857,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/materializer-result.json",
+      "fixture_file": "sources/materializer-result.json",
+      "sha256": "8cf9fc8936c1236244bca642b7a90e7403f2bb6ee772367d1b01c91e5d935437",
+      "bytes": 13931,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/sources/django/contrib/sessions/middleware.py",
+      "fixture_file": "sources/source-0.py",
+      "sha256": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051",
+      "bytes": 3646,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/edit-0.patch",
+      "fixture_file": "sources/edit-0.patch",
+      "sha256": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5",
+      "bytes": 678,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/sources/django/middleware/cache.py",
+      "fixture_file": "sources/source-1.py",
+      "sha256": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127",
+      "bytes": 8536,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/edit-1.patch",
+      "fixture_file": "sources/edit-1.patch",
+      "sha256": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f",
+      "bytes": 3360,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/sources/django/middleware/security.py",
+      "fixture_file": "sources/source-2.py",
+      "sha256": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b",
+      "bytes": 2552,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/runs/h13-20260927-13/frozen/edit-2.patch",
+      "fixture_file": "sources/edit-2.patch",
+      "sha256": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd",
+      "bytes": 1050,
+      "original_frozen_manifest_checked": true
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/summary.json",
+      "fixture_file": "history/restore/summary.json",
+      "sha256": "80851001c11b600058d4a1de7347454882e5396d22305da2b570b2f7dda6ec4f",
+      "bytes": 5474,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/clean_baseline/test_coroutine.txt",
+      "fixture_file": "history/restore/clean_baseline/test_coroutine.txt",
+      "sha256": "51b6a6d818ffd25c05cd9bce601db0ae9048a40d219ecec844db51ce9ebcb5e8",
+      "bytes": 2334,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/clean_baseline/test_deprecation.txt",
+      "fixture_file": "history/restore/clean_baseline/test_deprecation.txt",
+      "sha256": "3fc8b67063508c5df0cda2b3ac355ea85a1d97d98ed3af29f2b0bbd36e5e3fbc",
+      "bytes": 368,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/candidate/test_coroutine.txt",
+      "fixture_file": "history/restore/candidate/test_coroutine.txt",
+      "sha256": "00435cadb1ffe5ccf643c588c5cc46461c85828a5c4788320301b8672db22ed5",
+      "bytes": 366,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/candidate/test_deprecation.txt",
+      "fixture_file": "history/restore/candidate/test_deprecation.txt",
+      "sha256": "3fc8b67063508c5df0cda2b3ac355ea85a1d97d98ed3af29f2b0bbd36e5e3fbc",
+      "bytes": 368,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/restored/test_coroutine.txt",
+      "fixture_file": "history/restore/restored/test_coroutine.txt",
+      "sha256": "998f0b7a792594071c134725b119dc4db7de8e8d106b0c4f4d8699f56b072784",
+      "bytes": 2334,
+      "original_frozen_manifest_checked": false
+    },
+    {
+      "artifact_id": "experiments/h13/restore/runs/h13-restore-20260928-02/restored/test_deprecation.txt",
+      "fixture_file": "history/restore/restored/test_deprecation.txt",
+      "sha256": "3fc8b67063508c5df0cda2b3ac355ea85a1d97d98ed3af29f2b0bbd36e5e3fbc",
+      "bytes": 368,
+      "original_frozen_manifest_checked": false
+    }
+  ]
+}

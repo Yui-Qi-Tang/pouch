@@ -1,0 +1,42 @@
+{
+  "schema_version": "pouch-sources/v1",
+  "authority_sha256": "4a6f0f25c7bc0d7fd3c239ffc2de1b4cb52e71165f77a8f5e94ead0617f9e629",
+  "request_id": "pouch-core-20260929-02/django-13344",
+  "sources": [
+    {
+      "id": "canon-node:258d1cd945beb958",
+      "file": "sources/django-13344-code-0.txt",
+      "sha256": "10f61d78f37fb02ad309563aae9a316988348c48321e942500478b304c7951e6"
+    },
+    {
+      "id": "canon-node:2f68ef79298040fe",
+      "file": "sources/django-13344-code-1.txt",
+      "sha256": "7d6d79b538a6efe1c07ad0a163ee5a87258376f579471a2b6cd0d92ad4bd441a"
+    },
+    {
+      "id": "canon-node:5d7fc415d2910a4a",
+      "file": "sources/django-13344-code-2.txt",
+      "sha256": "00f9cb4cf497fb5caf7b11e25386437e8cd496b26cb91a715d951a93251875a0"
+    },
+    {
+      "id": "canon-node:17bbb8a9925af4c4",
+      "file": "sources/django-13344-code-3.txt",
+      "sha256": "ce0ca804a155ada95c5838a0f3f7fd7e56f06d2a736c288c59b6a4026bfdceac"
+    },
+    {
+      "id": "canon-node:0225b2607934a30d",
+      "file": "sources/django-13344-contract.txt",
+      "sha256": "54520653998715c49c5c2d38bbcd6d2e02a601c9168edadd722e5eda0ff2cc94"
+    },
+    {
+      "id": "canon-node:0e99350a33da0422",
+      "file": "sources/django-13344-issue.txt",
+      "sha256": "fa0d64caaae3c17b9e52c447593c2c8ac3354046b1df2ceb293645b293b06090"
+    },
+    {
+      "id": "canon-node:107cb81e8b993612",
+      "file": "sources/django-13344-model.txt",
+      "sha256": "1a542d602bfd3f770b32d92e0e0a2d0b428363e456146cd390bffe9c86b74bcd"
+    }
+  ]
+}

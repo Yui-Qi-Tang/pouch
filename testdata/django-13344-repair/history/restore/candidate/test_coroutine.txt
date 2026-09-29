@@ -1,0 +1,10 @@
+test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+OK
+Testing against Django installed in '/testbed/django'
+Importing application deprecation
+Skipping setup of unused database(s): default, other.
+System check identified no issues (0 silenced).
