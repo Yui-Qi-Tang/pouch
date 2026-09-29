@@ -1,0 +1,17 @@
+{
+  "schema_version": "pouch-sources/v1",
+  "authority_sha256": "27c3c38b25bb5198d8f3a0b0027dacc335a6da2e4de4e8a5f411e1c5ba5f39dd",
+  "request_id": "pouch-core-20260929-02/synthetic-key-rotation",
+  "sources": [
+    {
+      "id": "canon-node:eb07a17a1c501944",
+      "file": "sources/synthetic-key-rotation-contract.txt",
+      "sha256": "33b631fad60de2f681352da2499f1529d7e3057b4844f3c78d271de15e089e61"
+    },
+    {
+      "id": "canon-node:6c33721946522a47",
+      "file": "sources/synthetic-key-rotation-model.txt",
+      "sha256": "f7d6b4e38921b698d1117d8db7382092ef30fc3d42b00395e321784f83770492"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "run_id": "h13-restore-20260928-02",
+  "version": "0.1.0-h13.5",
+  "instance_id": "django__django-13344",
+  "status": "FAIL",
+  "started_at": "2026-09-27T18:07:06.013063+00:00",
+  "new_solver_calls": 0,
+  "new_core_calls": 0,
+  "automatic_retries": 0,
+  "arms": [
+    {
+      "arm": "clean_baseline",
+      "container_name": "h13-restore-20260928-02-clean-baseline",
+      "container_id": "47f7d181c924a32dbef5b21238aed24a6442372c3c5824b44e30ff19eb97534e",
+      "environment_sha256": "d29442776661aea76c448409ce0cce04151746d58ea20a3bd153cf34f88f7c67",
+      "base_tree_sha256": "ad5b6ba01b655a14b7e16b9a563b8ea0046775c4089144dea45bbbe30f32eb18",
+      "full_suite": {
+        "shell_exit_code": 0,
+        "ran": [
+          "Ran 487 tests in 72.305s"
+        ],
+        "terminal": [
+          "FAILED (failures=4, skipped=117)"
+        ],
+        "f2p_original_parser": {
+          "test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests)": null,
+          "test_deprecation (deprecation.test_middleware_mixin.MiddlewareMixinTests)": null
+        },
+        "p2p_passed": 356,
+        "p2p_total": 356
+      },
+      "focused": [
+        {
+          "test": "test_coroutine",
+          "status": "FAILED",
+          "exit_code": 1,
+          "failure_headers": [
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='CacheMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='FetchFromCacheMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='SecurityMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='UpdateCacheMiddleware')"
+          ]
+        },
+        {
+          "test": "test_deprecation",
+          "status": "PASSED",
+          "exit_code": 0,
+          "failure_headers": []
+        }
+      ],
+      "environment_unchanged": true
+    },
+    {
+      "arm": "candidate",
+      "container_name": "h13-restore-20260928-02-candidate",
+      "container_id": "b74d1eea8d8f1c3cf95017540eef8346bf64a216fa4a73f34d9eb06bf07e384d",
+      "environment_sha256": "d29442776661aea76c448409ce0cce04151746d58ea20a3bd153cf34f88f7c67",
+      "base_tree_sha256": "ad5b6ba01b655a14b7e16b9a563b8ea0046775c4089144dea45bbbe30f32eb18",
+      "patched_tree_sha256": "a3f72ca6749e418545fab6aada1782e1355dbba04c215cdbc45dd09f2acef61d",
+      "full_suite": {
+        "shell_exit_code": 0,
+        "ran": [
+          "Ran 487 tests in 72.302s"
+        ],
+        "terminal": [
+          "OK (skipped=117)"
+        ],
+        "f2p_original_parser": {
+          "test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests)": "PASSED",
+          "test_deprecation (deprecation.test_middleware_mixin.MiddlewareMixinTests)": "PASSED"
+        },
+        "p2p_passed": 356,
+        "p2p_total": 356
+      },
+      "focused": [
+        {
+          "test": "test_coroutine",
+          "status": "PASSED",
+          "exit_code": 0,
+          "failure_headers": []
+        },
+        {
+          "test": "test_deprecation",
+          "status": "PASSED",
+          "exit_code": 0,
+          "failure_headers": []
+        }
+      ],
+      "environment_unchanged": true
+    },
+    {
+      "arm": "restored",
+      "container_name": "h13-restore-20260928-02-restored",
+      "container_id": "fe6c2f20a6a9279882e33b337e6782538bf3037b61b59bae60058c11725bde8a",
+      "environment_sha256": "d29442776661aea76c448409ce0cce04151746d58ea20a3bd153cf34f88f7c67",
+      "base_tree_sha256": "ad5b6ba01b655a14b7e16b9a563b8ea0046775c4089144dea45bbbe30f32eb18",
+      "patched_tree_sha256": "a3f72ca6749e418545fab6aada1782e1355dbba04c215cdbc45dd09f2acef61d",
+      "restored_tree_equal_base": true,
+      "full_suite": {
+        "shell_exit_code": 0,
+        "ran": [
+          "Ran 487 tests in 72.325s"
+        ],
+        "terminal": [
+          "FAILED (failures=4, skipped=117)"
+        ],
+        "f2p_original_parser": {
+          "test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests)": null,
+          "test_deprecation (deprecation.test_middleware_mixin.MiddlewareMixinTests)": null
+        },
+        "p2p_passed": 356,
+        "p2p_total": 356
+      },
+      "focused": [
+        {
+          "test": "test_coroutine",
+          "status": "FAILED",
+          "exit_code": 1,
+          "failure_headers": [
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='CacheMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='FetchFromCacheMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='SecurityMiddleware')",
+            "FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='UpdateCacheMiddleware')"
+          ]
+        },
+        {
+          "test": "test_deprecation",
+          "status": "PASSED",
+          "exit_code": 0,
+          "failure_headers": []
+        }
+      ],
+      "environment_unchanged": true
+    }
+  ],
+  "execution": "COMPLETED",
+  "full_suite_invocations": 3,
+  "focused_invocations": 6,
+  "control_reproduced_all_f2p": false,
+  "reason": "CONTROL_REPRODUCTION_MISMATCH",
+  "baseline_restored_outcomes_equal": true,
+  "ended_at": "2026-09-27T18:11:36.545711+00:00"
+}

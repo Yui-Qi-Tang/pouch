@@ -1,0 +1,41 @@
+test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) ... Testing against Django installed in '/testbed/django'
+Importing application deprecation
+Skipping setup of unused database(s): default, other.
+System check identified no issues (0 silenced).
+
+======================================================================
+FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='CacheMiddleware')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/deprecation/test_middleware_mixin.py", line 85, in test_coroutine
+    self.assertIs(asyncio.iscoroutinefunction(middleware_instance), True)
+AssertionError: False is not True
+
+======================================================================
+FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='FetchFromCacheMiddleware')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/deprecation/test_middleware_mixin.py", line 85, in test_coroutine
+    self.assertIs(asyncio.iscoroutinefunction(middleware_instance), True)
+AssertionError: False is not True
+
+======================================================================
+FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='SecurityMiddleware')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/deprecation/test_middleware_mixin.py", line 85, in test_coroutine
+    self.assertIs(asyncio.iscoroutinefunction(middleware_instance), True)
+AssertionError: False is not True
+
+======================================================================
+FAIL: test_coroutine (deprecation.test_middleware_mixin.MiddlewareMixinTests) (middleware='UpdateCacheMiddleware')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/deprecation/test_middleware_mixin.py", line 85, in test_coroutine
+    self.assertIs(asyncio.iscoroutinefunction(middleware_instance), True)
+AssertionError: False is not True
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=4)

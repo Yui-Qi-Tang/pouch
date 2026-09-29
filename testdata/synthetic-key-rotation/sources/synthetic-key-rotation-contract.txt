@@ -1,0 +1,59 @@
+# S4 雙物件金鑰輪替與退役
+
+Status: PREPARATION / NOT_FROZEN / NOT_RUN. This original specification is authored for H10; it is not a historical AHE observation.
+
+## synthetic-key-rotation.C01
+
+S4: Dual-object key rotation and retirement. This is an original authored synthetic contract. It does not claim a production observation or pre-existing AHE behavior.
+
+## synthetic-key-rotation.C02
+
+The complete coordinate/action tables below define this finite world. Object identity and material payload references are preserved. Effects/frame are part of the contract, not inferred from names. Domain constraints express declared consistency rules, not a filtered list of reachable states.
+
+## synthetic-key-rotation.C03
+
+The original query starts at the complete baseline and targets the declared forward Goal. Distinct action sequences remain distinct. Forward search is simple first-hit at exact lengths 0..6. Return is a separate query from the complete forward endpoint to the complete baseline; an information/representation round trip alone does not establish that operation path.
+
+## synthetic-key-rotation.C04
+
+No real cryptography, payment, delivery, package installation, network, operating-system lock, database or production writer is invoked by this synthetic model. The listed available operations bound any no-return conclusion.
+
+## synthetic-key-rotation.C05
+
+K0 initially protects two distinct plaintext objects A=alpha and B=beta. K1 can be provisioned. Rotating either object needs both keys, keeps the other object unchanged, and clears validation. Validation binds both exact K1 ciphertext identities. This is offline staging; no concurrent reader exists.
+
+## synthetic-key-rotation.C06
+
+A checked pair may be published. K0 may instead be retired after both objects use K1 and before publication; retirement is permanent in this action set. Retiring K0 does not change the already checked ciphertext identities.
+
+## synthetic-key-rotation.C07
+
+A published manifest can be withdrawn. After clearing validation, either object can be converted back only while K0 exists. K1 can be dropped only after both objects are back at K0. Restoring ciphertext without restoring every key/validation/manifest field is not full baseline restoration.
+
+## Complete coordinate and payload contract
+
+The following identities and payloads are part of the original authored contract. String IDs denote exactly these values; they do not stand for unexplained success flags.
+
+```json
+{"fields":{"old_key":["K0_present","K0_absent"],"new_key":["K1_absent","K1_present"],"cipher_A":["A@K0","A@K1"],"cipher_B":["B@K0","B@K1"],"validation":["none","A@K1+B@K1"],"manifest":["draft","published_v1"]},"baseline":{"old_key":"K0_present","new_key":"K1_absent","cipher_A":"A@K0","cipher_B":"B@K0","validation":"none","manifest":"draft"},"domain_forbidden":[{"new_key":"K1_absent","cipher_A":"A@K1"},{"new_key":"K1_absent","cipher_B":"B@K1"},{"old_key":"K0_absent","cipher_A":"A@K0"},{"old_key":"K0_absent","cipher_B":"B@K0"},{"validation":"A@K1+B@K1","cipher_A":"A@K0"},{"validation":"A@K1+B@K1","cipher_B":"B@K0"},{"manifest":"published_v1","validation":"none"}],"goals":{"forward":{"manifest":"published_v1"},"return":{"old_key":"K0_present","new_key":"K1_absent","cipher_A":"A@K0","cipher_B":"B@K0","validation":"none","manifest":"draft"}},"payloads":{"keys":{"K0":{"id":"key:K0","role":"original"},"K1":{"id":"key:K1","role":"replacement"}},"objects":{"A":{"id":"object:A","plaintext":"alpha"},"B":{"id":"object:B","plaintext":"beta"}},"ciphertexts":{"A@K0":{"object_id":"object:A","key_id":"key:K0","encoding":"symbolic_identity_not_cipher_bytes"},"A@K1":{"object_id":"object:A","key_id":"key:K1","encoding":"symbolic_identity_not_cipher_bytes"},"B@K0":{"object_id":"object:B","key_id":"key:K0","encoding":"symbolic_identity_not_cipher_bytes"},"B@K1":{"object_id":"object:B","key_id":"key:K1","encoding":"symbolic_identity_not_cipher_bytes"}}}}
+```
+
+## Complete action contract
+
+A guard is conjunctive; a list is membership in that fixed value set. Effects occur simultaneously. Every other field is preserved exactly by frame. If the guard is false the operation has no legal transition; it is not a no-op. No operation creates an undeclared object or reverses a monotone field.
+
+```json
+[
+{"id":"provision_K1","guard":{"new_key":"K1_absent","manifest":"draft"},"effect":{"new_key":"K1_present"},"frame":["old_key","cipher_A","cipher_B","validation","manifest"],"cost":1,"basis":["synthetic-key-rotation.C05"]},
+{"id":"rotate_A","guard":{"old_key":"K0_present","new_key":"K1_present","cipher_A":"A@K0","manifest":"draft"},"effect":{"cipher_A":"A@K1","validation":"none"},"frame":["old_key","new_key","cipher_B","manifest"],"cost":1,"basis":["synthetic-key-rotation.C05"]},
+{"id":"rotate_B","guard":{"old_key":"K0_present","new_key":"K1_present","cipher_B":"B@K0","manifest":"draft"},"effect":{"cipher_B":"B@K1","validation":"none"},"frame":["old_key","new_key","cipher_A","manifest"],"cost":1,"basis":["synthetic-key-rotation.C05"]},
+{"id":"validate_pair","guard":{"cipher_A":"A@K1","cipher_B":"B@K1","validation":"none","manifest":"draft"},"effect":{"validation":"A@K1+B@K1"},"frame":["old_key","new_key","cipher_A","cipher_B","manifest"],"cost":1,"basis":["synthetic-key-rotation.C05"]},
+{"id":"retire_K0","guard":{"old_key":"K0_present","new_key":"K1_present","cipher_A":"A@K1","cipher_B":"B@K1","manifest":"draft"},"effect":{"old_key":"K0_absent"},"frame":["new_key","cipher_A","cipher_B","validation","manifest"],"cost":1,"basis":["synthetic-key-rotation.C06"]},
+{"id":"publish_manifest","guard":{"new_key":"K1_present","cipher_A":"A@K1","cipher_B":"B@K1","validation":"A@K1+B@K1","manifest":"draft"},"effect":{"manifest":"published_v1"},"frame":["old_key","new_key","cipher_A","cipher_B","validation"],"cost":1,"basis":["synthetic-key-rotation.C06"]},
+{"id":"withdraw_manifest","guard":{"manifest":"published_v1"},"effect":{"manifest":"draft"},"frame":["old_key","new_key","cipher_A","cipher_B","validation"],"cost":1,"basis":["synthetic-key-rotation.C07"]},
+{"id":"clear_validation","guard":{"validation":"A@K1+B@K1","manifest":"draft"},"effect":{"validation":"none"},"frame":["old_key","new_key","cipher_A","cipher_B","manifest"],"cost":1,"basis":["synthetic-key-rotation.C07"]},
+{"id":"restore_A","guard":{"old_key":"K0_present","cipher_A":"A@K1","validation":"none","manifest":"draft"},"effect":{"cipher_A":"A@K0"},"frame":["old_key","new_key","cipher_B","validation","manifest"],"cost":1,"basis":["synthetic-key-rotation.C07"]},
+{"id":"restore_B","guard":{"old_key":"K0_present","cipher_B":"B@K1","validation":"none","manifest":"draft"},"effect":{"cipher_B":"B@K0"},"frame":["old_key","new_key","cipher_A","validation","manifest"],"cost":1,"basis":["synthetic-key-rotation.C07"]},
+{"id":"drop_K1","guard":{"new_key":"K1_present","cipher_A":"A@K0","cipher_B":"B@K0","validation":"none","manifest":"draft"},"effect":{"new_key":"K1_absent"},"frame":["old_key","cipher_A","cipher_B","validation","manifest"],"cost":1,"basis":["synthetic-key-rotation.C07"]}
+]
+```
