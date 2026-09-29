@@ -1,5 +1,6 @@
 // Package planning compiles declared finite models and searches for bounded paths.
 // It does not infer action semantics from evidence edges or use receiver answers.
+// The package-local README.md defines fields, units, policy and status values.
 package planning
 
 import (

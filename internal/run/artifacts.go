@@ -2,7 +2,6 @@ package run
 
 import (
 	"encoding/json"
-	"errors"
 	"sort"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/projection"
@@ -10,7 +9,8 @@ import (
 )
 
 // AttachEvidence projects an explicitly pinned graph or a record-only source view.
-// A supplied graph must explicitly bind each selected source node's content digest.
+// A supplied graph must bind every selected source to its caller-owned digest.
+// Native source_claim payloads and explicit inline content digests are supported.
 func AttachEvidence(b *Bundle, in Inputs, raw []byte, expected, dir string) error {
 	supplied := len(raw) > 0
 	if !supplied {
@@ -37,23 +37,12 @@ func AttachEvidence(b *Bundle, in Inputs, raw []byte, expected, dir string) erro
 		return err
 	}
 	if supplied {
-		present := map[string]string{}
-		for _, node := range snapshot.Graph().Nodes {
-			var digest string
-			if v, ok := node.Attributes["content_sha256"]; ok {
-				if err := json.Unmarshal(v, &digest); err != nil {
-					return errors.New("graph source digest type")
-				}
-				present[node.ID] = digest
-			}
+		if err := checkGraphSources(snapshot.Graph(), in); err != nil {
+			return err
 		}
-		for _, id := range in.Authority.SourceIDs() {
-			want, _ := in.Authority.SourceDigest(id)
-			if present[id] != want {
-				return errors.New("graph selected source binding mismatch")
-			}
-		}
-		b.EvidenceScope = "caller-pinned graph; selected source node content digests checked; metadata defines scope"
+		b.EvidenceScope = "caller-pinned graph; selected source bindings checked against authority; payload claims and supplied inline content hashed; metadata defines scope"
+	} else {
+		b.EvidenceScope = "selected source records; graph topology not supplied"
 	}
 	matrix, err := projection.Project(snapshot)
 	if err != nil {

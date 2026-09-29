@@ -17,35 +17,46 @@ import (
 
 // PathResult binds a separately checked recovery conclusion to a forward path.
 type PathResult struct {
-	ID              string              `json:"id"`
-	ForwardVerified bool                `json:"forward_verified"`
-	RecoveryStatus  string              `json:"recovery_status"`
-	Return          *validation.Trace   `json:"return"`
-	PackageFile     string              `json:"package_file,omitempty"`
-	Receipt         *validation.Receipt `json:"receipt"`
-	ClosureFile     string              `json:"closure_file,omitempty"`
-	Reason          string              `json:"reason,omitempty"`
+	ID              string `json:"id"`
+	ForwardVerified bool   `json:"forward_verified"`
+	// RETURN_VERIFIED, NO_RETURN_IN_MODEL, or UNKNOWN; require Receipt for
+	// acceptance.
+	RecoveryStatus string              `json:"recovery_status"`
+	Return         *validation.Trace   `json:"return"`
+	PackageFile    string              `json:"package_file,omitempty"`
+	Receipt        *validation.Receipt `json:"receipt"`
+	ClosureFile    string              `json:"closure_file,omitempty"`
+	// Unknown-recovery explanation; see README.md.
+	Reason string `json:"reason,omitempty"`
 }
 
 // Bundle is shared by JSON consumers and the offline HTML renderer.
+// Its status is a certification outcome, distinct from Search.Status. Consume
+// it with the returned error; rendering does not authenticate these fields.
+// See the package-local README.md for values and partial-result semantics.
 type Bundle struct {
-	SchemaVersion    string              `json:"schema_version"`
-	ProjectVersion   string              `json:"project_version"`
-	RequestID        string              `json:"request_id"`
-	AuthoritySHA256  string              `json:"authority_sha256"`
-	Status           string              `json:"status"`
-	Complete         bool                `json:"complete"`
+	SchemaVersion   string `json:"schema_version"`
+	ProjectVersion  string `json:"project_version"`
+	RequestID       string `json:"request_id"`
+	AuthoritySHA256 string `json:"authority_sha256"`
+	// FOUND, NO_PATH_WITHIN_BOUND, NO_PATH_IN_MODEL, INCONCLUSIVE, or
+	// REJECTED.
+	Status string `json:"status"`
+	// Search, set comparison and per-path recovery certification finished.
+	Complete bool `json:"complete"`
+	// model_conditional_conclusion.
 	ConclusionKind   string              `json:"conclusion_kind"`
 	ObservedFact     bool                `json:"observed_fact"`
 	NativeAHEReceipt bool                `json:"native_ahe_receipt"`
 	Contract         validation.Contract `json:"contract"`
 	Sources          SourceManifest      `json:"sources"`
 	EvidenceMatrix   *projection.Matrix  `json:"evidence_matrix,omitempty"`
-	EvidenceScope    string              `json:"evidence_scope"`
-	Search           planning.Result     `json:"search"`
-	SetCheck         validation.SetCheck `json:"set_check"`
-	Paths            []PathResult        `json:"paths"`
-	Diagnostics      []string            `json:"diagnostics"`
+	// Descriptive provenance, not a status enum.
+	EvidenceScope string              `json:"evidence_scope"`
+	Search        planning.Result     `json:"search"`
+	SetCheck      validation.SetCheck `json:"set_check"`
+	Paths         []PathResult        `json:"paths"`
+	Diagnostics   []string            `json:"diagnostics"`
 }
 
 // Certify independently checks the solver's traces and set against original rules.

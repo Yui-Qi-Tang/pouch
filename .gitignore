@@ -1,2 +1,17 @@
 /bin/
 .DS_Store
+
+# Generated runs and reports stay local.
+/artifacts/
+/docs/acceptance/
+
+# Keep only maintained product documentation under docs/.
+/docs/*
+!/docs/ARCH.md
+!/docs/THEORY.md
+!/docs/STATUS.md
+!/docs/ahe-adapter.md
+!/docs/artifacts.md
+!/docs/bundle-format.md
+!/docs/projection-format.md
+!/docs/search-format.md

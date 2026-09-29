@@ -1,0 +1,98 @@
+{
+  "schema_version": "pouch-recorded-repair-fixture/v1",
+  "source_commit": "470360b828d69cafe523b8fb6d6b960fdb1223d5",
+  "source_run": "artifacts/go-repair-20260929-01",
+  "source_manifest_sha256": "e28cb567e514d3dd376c138dc1bd76e89e23a7b5a75944b13ae4d2ea51d9c4ad",
+  "files": [
+    {
+      "id": "model/authority.json",
+      "sha256": "69e7489f7174cab01be065d3e515f87a2cde279681ffe58898d22f56cb0d4f78",
+      "bytes": 6966
+    },
+    {
+      "id": "model/bundle.json",
+      "sha256": "499e0065efdbe8ab75de9256ba83bb5ec6ab42d5a6689a5e4791055153b86d27",
+      "bytes": 96928
+    },
+    {
+      "id": "model/packages/p000000.json",
+      "sha256": "48b9fcebe9c67f7ca0177b1d7deb8321bf217e194d4c53f8352f0636103b60ae",
+      "bytes": 5710
+    },
+    {
+      "id": "model/packages/p000001.json",
+      "sha256": "a254cd128d8738aadf74780cda1811e0d622dcc7dbd9460bd2635fd53a520ee4",
+      "bytes": 5710
+    },
+    {
+      "id": "model/packages/p000002.json",
+      "sha256": "35c5313b5f28d571ef771d7bd1b6dc09ce2c76a9297391f3d97850ead4ce8e0a",
+      "bytes": 5710
+    },
+    {
+      "id": "model/packages/p000003.json",
+      "sha256": "92f3a80fa1d35ea3c739aa2d30051519cd690a8b4fa3d1883d97fbe853454192",
+      "bytes": 5710
+    },
+    {
+      "id": "model/packages/p000004.json",
+      "sha256": "faaa059437ee4fd109023adb9171f69d0fbe07ab7e30f08e3432dbb508eaed1f",
+      "bytes": 5710
+    },
+    {
+      "id": "model/packages/p000005.json",
+      "sha256": "bfc0008e1b5fc7bdf84f41378d27edf3fe9818fc968ada77fe3a956bba877e06",
+      "bytes": 5710
+    },
+    {
+      "id": "model/sources.json",
+      "sha256": "524a948417c2bcde0daed9ad71713c1ffcf42692889bb2c44f0f032070a39d3f",
+      "bytes": 1604
+    },
+    {
+      "id": "model/sources/s000.txt",
+      "sha256": "6a8fa1ac52ba6ac99df474c779fa51fc377ef089dc4f8e5f409b137f9ed34644",
+      "bytes": 2857
+    },
+    {
+      "id": "model/sources/s001.txt",
+      "sha256": "8cf9fc8936c1236244bca642b7a90e7403f2bb6ee772367d1b01c91e5d935437",
+      "bytes": 13931
+    },
+    {
+      "id": "model/sources/s002.txt",
+      "sha256": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051",
+      "bytes": 3646
+    },
+    {
+      "id": "model/sources/s003.txt",
+      "sha256": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5",
+      "bytes": 678
+    },
+    {
+      "id": "model/sources/s004.txt",
+      "sha256": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127",
+      "bytes": 8536
+    },
+    {
+      "id": "model/sources/s005.txt",
+      "sha256": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f",
+      "bytes": 3360
+    },
+    {
+      "id": "model/sources/s006.txt",
+      "sha256": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b",
+      "bytes": 2552
+    },
+    {
+      "id": "model/sources/s007.txt",
+      "sha256": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd",
+      "bytes": 1050
+    },
+    {
+      "id": "replay/result.json",
+      "sha256": "102ec1aed67c316a053e4d68f5db64147d25acfd5c8b544fa92fb46dba8188d1",
+      "bytes": 60069
+    }
+  ]
+}

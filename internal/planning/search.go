@@ -23,12 +23,17 @@ type Artifact struct {
 	Bytes  int64  `json:"bytes"`
 }
 
-// SolveResult reports one independently checked SAT assignment or UNSAT proof.
+// SolveResult preserves a solver answer and whether its evidence was checked.
+// A SAT/UNSAT label alone is insufficient: callers must check Verified and error.
+// Field values and failure cases are documented in this package's README.md.
 type SolveResult struct {
-	Status     string       `json:"status"`
+	// SAT, UNSAT, or INCONCLUSIVE from the bundled runner.
+	Status string `json:"status"`
+	// Total one-based DIMACS assignment for a verified SAT result.
 	Assignment map[int]bool `json:"-"`
-	Verified   bool         `json:"verified"`
-	Artifacts  []Artifact   `json:"artifacts"`
+	// Formula evidence checked, not original-rule replay or source truth.
+	Verified  bool       `json:"verified"`
+	Artifacts []Artifact `json:"artifacts"`
 }
 
 // Solver is supplied by the application; the planner never selects executables.
@@ -39,10 +44,14 @@ type Solver interface {
 // Options caps work without changing the declared query or claiming exhaustion.
 // Zero selects conservative defaults; negative values are rejected.
 type Options struct {
-	MaxQueries   int `json:"max_queries"`
-	MaxPaths     int `json:"max_paths"`
+	// Solver calls across directions; zero selects 10,000.
+	MaxQueries int `json:"max_queries"`
+	// Forward paths; zero selects 1,000.
+	MaxPaths int `json:"max_paths"`
+	// Variables per CNF; zero selects 100,000.
 	MaxVariables int `json:"max_variables"`
-	MaxClauses   int `json:"max_clauses"`
+	// Clauses per CNF; zero selects 1,000,000.
+	MaxClauses int `json:"max_clauses"`
 }
 
 func (o Options) defaults() (Options, error) {
@@ -66,9 +75,12 @@ func (o Options) defaults() (Options, error) {
 
 // Query records every solver invocation, including an unsuccessful tool call.
 type Query struct {
-	ID        string     `json:"id"`
-	Direction string     `json:"direction"`
-	Horizon   int        `json:"horizon"`
+	ID string `json:"id"`
+	// forward or return.
+	Direction string `json:"direction"`
+	// Exact action count, including zero; not the maximum length.
+	Horizon int `json:"horizon"`
+	// Copied solver answer; inspect Verified and Error as well.
 	Status    string     `json:"status"`
 	Verified  bool       `json:"verified"`
 	Artifacts []Artifact `json:"artifacts"`
@@ -77,37 +89,58 @@ type Query struct {
 
 // Path is one action-sequence-distinct forward trace and its return search index.
 type Path struct {
-	ID          string           `json:"id"`
-	Trace       validation.Trace `json:"trace"`
-	QueryID     string           `json:"query_id"`
-	ReturnIndex int              `json:"return_index"`
+	ID      string           `json:"id"`
+	Trace   validation.Trace `json:"trace"`
+	QueryID string           `json:"query_id"`
+	// Zero-based Returns index; -1 means not assigned.
+	ReturnIndex int `json:"return_index"`
 }
 
 // Return is a separate shortest-path search from a complete reached state.
 // NO_RETURN_WITHIN_BOUND does not establish no-return in the full finite model.
 type Return struct {
-	Endpoint            validation.State  `json:"endpoint"`
-	Status              string            `json:"status"`
-	Trace               *validation.Trace `json:"trace"`
-	CompleteWithinBound bool              `json:"complete_within_bound"`
-	QueryIDs            []string          `json:"query_ids"`
+	Endpoint validation.State `json:"endpoint"`
+	// UNKNOWN, RETURN_FOUND, or NO_RETURN_WITHIN_BOUND.
+	Status string `json:"status"`
+	// Nil means no witness; a non-nil zero-step trace is valid.
+	Trace *validation.Trace `json:"trace"`
+	// Shortest witness found, or all allowed lengths exhausted; not all
+	// returns enumerated.
+	CompleteWithinBound bool     `json:"complete_within_bound"`
+	QueryIDs            []string `json:"query_ids"`
 }
 
-// Result keeps accepted evidence on interruption; Complete never survives an error.
+// Result keeps solver evidence on interruption; Complete never survives an error.
+// It is a search result, not an original-rule validation receipt. See README.md
+// in this package for all fields, status transitions and partial-result examples.
 type Result struct {
-	SchemaVersion   string   `json:"schema_version"`
-	Policy          string   `json:"policy"`
-	Matrix          Matrix   `json:"matrix"`
-	Options         Options  `json:"options"`
-	ForwardLimit    int      `json:"forward_limit"`
-	ReturnLimit     int      `json:"return_limit"`
-	Forward         []Path   `json:"forward"`
-	Returns         []Return `json:"returns"`
-	Queries         []Query  `json:"queries"`
-	ForwardComplete bool     `json:"forward_complete"`
-	Complete        bool     `json:"complete"`
-	Status          string   `json:"status"`
-	Error           string   `json:"error,omitempty"`
+	// pouch-search/v1.
+	SchemaVersion string `json:"schema_version"`
+	// Fixed simple-first-hit/action-sequence; not a selectable strategy.
+	Policy string `json:"policy"`
+	// Operation rules used for encoding, not evidence adjacency.
+	Matrix Matrix `json:"matrix"`
+	// Effective resource budgets after defaults.
+	Options Options `json:"options"`
+	// Inclusive maximum forward action count from the contract.
+	ForwardLimit int `json:"forward_limit"`
+	// Inclusive maximum return action count from the contract.
+	ReturnLimit int `json:"return_limit"`
+	// Paths found so far; may be partial.
+	Forward []Path `json:"forward"`
+	// One shortest-return search per distinct complete endpoint.
+	Returns []Return `json:"returns"`
+	// Attempted solver calls, including failed calls.
+	Queries []Query `json:"queries"`
+	// Every allowed forward length exhausted by verified UNSAT.
+	ForwardComplete bool `json:"forward_complete"`
+	// Enumeration and requested return searches finished, not all paths
+	// recoverable.
+	Complete bool `json:"complete"`
+	// FOUND, NO_PATH_WITHIN_BOUND, or INCONCLUSIVE; see README.md.
+	Status string `json:"status"`
+	// Returned error text; diagnostic, not a stable code.
+	Error string `json:"error,omitempty"`
 }
 
 // Search enumerates all simple first-hit forward paths within the declared bound,

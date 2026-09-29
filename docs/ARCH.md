@@ -51,7 +51,9 @@ internal/run/           Input bindings, independent certification and bundles
 internal/presentation/  Offline HTML generated from the bundle
 internal/ahe/           Optional public stdio MCP read/review/admission adapter
 internal/cli/           Application wiring and exit/status handling
-docs/                   Architecture, theory, formats and acceptance
+docs/                   Maintained product docs; detailed run reports ignored
+testdata/               Small versioned regression inputs
+artifacts/              Ignored local run outputs
 third_party/ahe-mcp/    Original notice for ported validation code
 ```
 
@@ -126,7 +128,7 @@ A lost response must be recorded as delivery unknown. First query the original r
 
 ### 4.3 Acceptance status after separation
 
-The adapter is implemented using public MCP profiles. It checks exact schema pins, preserves raw responses, validates locally before preparing a result, and requires an external approval tied to the native display, subject and package hash. See [adapter details](ahe-adapter.md) and [Go acceptance](implementation-acceptance.md). Historical integration through a dedicated internal API is not counted as acceptance of this new boundary.
+The adapter is implemented using public MCP profiles. It checks exact schema pins, preserves raw responses, validates locally before preparing a result, and requires an external approval tied to the native display, subject and package hash. See [adapter details](ahe-adapter.md) and [current verification scope](STATUS.md). Historical integration through a dedicated internal API is not counted as acceptance of this new boundary.
 
 The current v1 `source_binding` pins canonical node IDs and exact UTF-8 `statement_text` digests. It does not bind every AHE lifecycle/provenance field or prove a globally atomic currentness cut. Supplemental record reads and a bounded graph snapshot remain separately identified.
 
@@ -184,20 +186,14 @@ The validator replays a supplied trace step by step and uses BFS to check unit-c
 
 `native_ahe_receipt` remains a v1 compatibility field and is always false. It is a data-format field with no AHE calling or writing capability. The run bundle retains the v1 receipt unchanged; external admission/readback is a separate AHE publication record. It does not redefine v1 bytes or schema semantics.
 
-## 10. Port and removal record
+## 10. Code provenance
 
-Source: `github.com/Yui-Qi-Tang/ahe-mcp`, commit `1af8ff59aae3801c9f5631090920adda3fac1933`. Per-file identities are recorded in [port-manifest.json](port-manifest.json).
-
-| Original location | Decision |
-| --- | --- |
-| `internal/pouchvalidation/{validation,json,validation_test}.go` | Move to Pouch `internal/validation`; rename the package and make comments provider-neutral while preserving decisions and the wire contract |
-| `cmd/ahe-pouch-validate/main.go` | Move to Pouch `cmd/pouch-validate`; update the import and command name |
-| `internal/evidenceingestion/pouch_endpoint.go` | Remove from AHE; it depends on internal AHE database/domain APIs and cannot be copied unchanged into standalone Pouch |
-| `internal/mcpintegration/pouch_local_integration_test.go`, `pouch_continuous_integration_test.go` | Remove from the current AHE test tree along with the dedicated API; preserve history in the source commit without treating it as new-product acceptance |
-| Dedicated AHE documentation and ignore exception | Remove and replace with a description of the general external-validation boundary |
-| General source-ref limit of 128 and its unit tests | Keep in AHE; these do not conflict with Pouch separation |
-
-The original removal/port operation did not rewrite Lab history or perform database admission. Subsequent new Go acceptance runs are recorded separately. Removing the wrapper does not replace AHE's general Query, source/endpoint review, or persistence capabilities.
+The standalone v1 validator was ported from `github.com/Yui-Qi-Tang/ahe-mcp`
+commit `1af8ff59aae3801c9f5631090920adda3fac1933`. Its package, CLI name and
+imports were adapted while preserving the wire contract and validation decisions.
+The original notice is retained under `third_party/ahe-mcp/`. Detailed migration
+inventories and historical acceptance records are local evidence, separate from
+the product specification.
 
 ## 11. Acceptance sequence
 
