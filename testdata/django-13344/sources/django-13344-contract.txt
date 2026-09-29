@@ -1,0 +1,8 @@
+# django-13344 finite source contract
+
+PREPARATION, NOT A FORMAL PASS.
+
+Baseline has no evaluated chain. Build preserves complete ordered middleware identities in payload sidecars. Successful routes use original reordered placement or the declared marker candidate, then await_view, then observe. The original outer order is a non-goal coroutine observation. Return clear_staging only restores local bindings.
+
+Raw Cartesian size: 48; valid domain: 13.
+All actions/frame partitions are explicit in model.json. Goal means faithful successful selected outcome, never merely observed source failure.

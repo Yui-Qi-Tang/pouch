@@ -1,0 +1,120 @@
+{
+  "frozen_at": "2026-09-27T14:58:50.493242+00:00",
+  "files": [
+    {
+      "path": "contract.json",
+      "bytes": 23873,
+      "sha256": "3de1343d58c31cc12298c5ff0b543f0938d4bd02b95901eaceeba116a59bd502"
+    },
+    {
+      "path": "control.patch",
+      "bytes": 259,
+      "sha256": "fa81fda40abc3328277d55c0cf40dd3d720226e3ebb4068f31ab8b5d6489f93a"
+    },
+    {
+      "path": "dataset.json",
+      "bytes": 39007,
+      "sha256": "cbfa67dcc6b2602824995d8b2addde8aff774322b4fa5853e6665d6f9203fb98"
+    },
+    {
+      "path": "edit-0.patch",
+      "bytes": 678,
+      "sha256": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5"
+    },
+    {
+      "path": "edit-1.patch",
+      "bytes": 3360,
+      "sha256": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f"
+    },
+    {
+      "path": "edit-2.patch",
+      "bytes": 1050,
+      "sha256": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd"
+    },
+    {
+      "path": "edits.json",
+      "bytes": 1249,
+      "sha256": "97f412bf172693866051e45715822305e8e68cadaa3c47251850cac551b686ae"
+    },
+    {
+      "path": "gold.patch",
+      "bytes": 5088,
+      "sha256": "cd4ce142ef39fd702719df87d61b4d6c21d40a39985baf48a469c3fa9248459a"
+    },
+    {
+      "path": "image-content-check.json",
+      "bytes": 74,
+      "sha256": "6e55e13d5b4c4b062c19c6d78fa64512547aabe5bdf35d8d7faefa0af09b1dc4"
+    },
+    {
+      "path": "image-environment.txt",
+      "bytes": 955,
+      "sha256": "9dd4f63181093999cc5a6dcb20d9daf43198b191278b3b2289914e4a704b364e"
+    },
+    {
+      "path": "image-tree-binding.json",
+      "bytes": 299,
+      "sha256": "dce929a04c4a73d70c28ddde3159cdfe88c514c0bfc5ea4a937c85c9a974f791"
+    },
+    {
+      "path": "image.json",
+      "bytes": 555,
+      "sha256": "5593de7d8798f68e2a420a15a475c2a7efc369e75387fc37e5344071c94b1a61"
+    },
+    {
+      "path": "model.json",
+      "bytes": 2857,
+      "sha256": "6a8fa1ac52ba6ac99df474c779fa51fc377ef089dc4f8e5f409b137f9ed34644"
+    },
+    {
+      "path": "official-eval.sh",
+      "bytes": 8826,
+      "sha256": "ba1bbc4b9ad8cbc8380c0cc85a3aa152010d4c2009c2a74f2e090defb3ec24b0"
+    },
+    {
+      "path": "plan.md",
+      "bytes": 4261,
+      "sha256": "529e403f01f6737e67154244dff81376388e891212ce5b57cc02fd930005b554"
+    },
+    {
+      "path": "prior-model.json",
+      "bytes": 8872,
+      "sha256": "dde3547462bbd3262446e01362638c217add7fce36ce9089f0a8a125280549be"
+    },
+    {
+      "path": "queries.json",
+      "bytes": 1632,
+      "sha256": "0afc159d1d19395acf7d8df82bd301009dd398c4ab08e5413f2a0c21a90f710b"
+    },
+    {
+      "path": "record.json",
+      "bytes": 38973,
+      "sha256": "b573d9b29163993481b69dfb333033bac7a5926f28abdef18be8eb74c1bb4223"
+    },
+    {
+      "path": "scope-mapping.json",
+      "bytes": 415,
+      "sha256": "94a4e0b5d4eb82455fac10ad4f11ce88416e52b31b661fba1936fcf2012a3c38"
+    },
+    {
+      "path": "sources/django/contrib/sessions/middleware.py",
+      "bytes": 3646,
+      "sha256": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051"
+    },
+    {
+      "path": "sources/django/middleware/cache.py",
+      "bytes": 8536,
+      "sha256": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127"
+    },
+    {
+      "path": "sources/django/middleware/security.py",
+      "bytes": 2552,
+      "sha256": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b"
+    },
+    {
+      "path": "test.patch",
+      "bytes": 7843,
+      "sha256": "f5a64bd24eaf102fc5e6fce0aa0bcc5ce6dd8a7d3a5c63e91f52e3375dc756dd"
+    }
+  ]
+}

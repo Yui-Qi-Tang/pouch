@@ -1,0 +1,62 @@
+[
+  {
+    "states": [
+      {
+        "chain": "none",
+        "phase": "empty",
+        "response": "none"
+      },
+      {
+        "chain": "candidate_outer",
+        "phase": "built",
+        "response": "none"
+      },
+      {
+        "chain": "candidate_outer",
+        "phase": "view_complete",
+        "response": "HttpResponse"
+      },
+      {
+        "chain": "candidate_outer",
+        "phase": "observed",
+        "response": "HttpResponse"
+      }
+    ],
+    "actions": [
+      "build_candidate_outer",
+      "await_view_candidate_outer",
+      "observe_candidate_outer"
+    ],
+    "cost": 3
+  },
+  {
+    "states": [
+      {
+        "chain": "none",
+        "phase": "empty",
+        "response": "none"
+      },
+      {
+        "chain": "original_inner",
+        "phase": "built",
+        "response": "none"
+      },
+      {
+        "chain": "original_inner",
+        "phase": "view_complete",
+        "response": "HttpResponse"
+      },
+      {
+        "chain": "original_inner",
+        "phase": "observed",
+        "response": "HttpResponse"
+      }
+    ],
+    "actions": [
+      "build_original_inner",
+      "await_view_original_inner",
+      "observe_original_inner"
+    ],
+    "cost": 3
+  }
+]

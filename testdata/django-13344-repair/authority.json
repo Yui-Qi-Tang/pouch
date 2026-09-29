@@ -1,0 +1,170 @@
+{
+  "schema_version": "pouch-finite-validation/v1",
+  "request_id": "django-13344-repair-go-20260929-01",
+  "source_binding": {
+    "lab:h13:django-13344:model": "6a8fa1ac52ba6ac99df474c779fa51fc377ef089dc4f8e5f409b137f9ed34644",
+    "lab:h13:django-13344:materializer": "8cf9fc8936c1236244bca642b7a90e7403f2bb6ee772367d1b01c91e5d935437",
+    "lab:h13:django-13344:source:0": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051",
+    "lab:h13:django-13344:patch:0": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5",
+    "lab:h13:django-13344:source:1": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127",
+    "lab:h13:django-13344:patch:1": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f",
+    "lab:h13:django-13344:source:2": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b",
+    "lab:h13:django-13344:patch:2": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd"
+  },
+  "assumptions": {
+    "complete_original_declaration": "{\"case\": \"django-13344-repair\", \"assumptions\": [{\"id\": \"scope\", \"kind\": \"scope_limit\", \"statement\": \"Known three-file patch model. The return reverses these declared file edits, not HTTP requests, database changes, external effects or technical debt. This model receipt is not an execution receipt.\", \"basis\": []}, {\"id\": \"checkpoint\", \"kind\": \"scenario_assumption\", \"statement\": \"Exact original file bytes and permissions are retained; source_binding remains current. A separate isolated-file demo checks the actual patch and reverse operations. No new Django/SWE tests are run.\", \"basis\": []}, {\"id\": \"history\", \"kind\": \"historical_evidence_limit\", \"statement\": \"Historical h13-restore-20260928-02 has test_coroutine FAIL → PASS → FAIL, but overall status remains FAIL / CONTROL_REPRODUCTION_MISMATCH because test_deprecation already passed before repair. Historical results are not current-run test results.\", \"basis\": []}, {\"id\": \"file_0\", \"kind\": \"declared_edit_mapping\", \"statement\": \"edit_0 = django/contrib/sessions/middleware.py. apply_0 applies the frozen edit-0.patch; reverse_0 reverses it. Each counts as one model operation, regardless of patch size.\", \"basis\": [\"lab:h13:django-13344:source:0\", \"lab:h13:django-13344:patch:0\"]}, {\"id\": \"file_1\", \"kind\": \"declared_edit_mapping\", \"statement\": \"edit_1 = django/middleware/cache.py. apply_1 applies the frozen edit-1.patch; reverse_1 reverses it. Each counts as one model operation, regardless of patch size.\", \"basis\": [\"lab:h13:django-13344:source:1\", \"lab:h13:django-13344:patch:1\"]}, {\"id\": \"file_2\", \"kind\": \"declared_edit_mapping\", \"statement\": \"edit_2 = django/middleware/security.py. apply_2 applies the frozen edit-2.patch; reverse_2 reverses it. Each counts as one model operation, regardless of patch size.\", \"basis\": [\"lab:h13:django-13344:source:2\", \"lab:h13:django-13344:patch:2\"]}], \"actions\": [{\"id\": \"apply_0\", \"basis\": [\"file_0\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:0\"]}, {\"id\": \"reverse_0\", \"basis\": [\"file_0\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:0\"]}, {\"id\": \"apply_1\", \"basis\": [\"file_1\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:1\"]}, {\"id\": \"reverse_1\", \"basis\": [\"file_1\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:1\"]}, {\"id\": \"apply_2\", \"basis\": [\"file_2\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:2\"]}, {\"id\": \"reverse_2\", \"basis\": [\"file_2\", \"scope\", \"checkpoint\", \"history\", \"lab:h13:django-13344:patch:2\"]}]}",
+    "scope": "Exact length 0..3, simple first-hit, existing known edits only; six orderings are not six newly invented repairs."
+  },
+  "model": {
+    "fields": {
+      "edit_0": [
+        "original",
+        "patched"
+      ],
+      "edit_1": [
+        "original",
+        "patched"
+      ],
+      "edit_2": [
+        "original",
+        "patched"
+      ],
+      "source_binding": [
+        "current",
+        "stale"
+      ],
+      "checkpoint": [
+        "present",
+        "missing"
+      ]
+    },
+    "forbidden": [],
+    "actions": [
+      {
+        "id": "apply_0",
+        "guard": {
+          "edit_0": "original",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_0": "patched"
+        },
+        "frame": [
+          "edit_1",
+          "edit_2",
+          "source_binding",
+          "checkpoint"
+        ]
+      },
+      {
+        "id": "reverse_0",
+        "guard": {
+          "edit_0": "patched",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_0": "original"
+        },
+        "frame": [
+          "edit_1",
+          "edit_2",
+          "source_binding",
+          "checkpoint"
+        ]
+      },
+      {
+        "id": "apply_1",
+        "guard": {
+          "edit_1": "original",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_1": "patched"
+        },
+        "frame": [
+          "edit_0",
+          "edit_2",
+          "source_binding",
+          "checkpoint"
+        ]
+      },
+      {
+        "id": "reverse_1",
+        "guard": {
+          "edit_1": "patched",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_1": "original"
+        },
+        "frame": [
+          "edit_0",
+          "edit_2",
+          "source_binding",
+          "checkpoint"
+        ]
+      },
+      {
+        "id": "apply_2",
+        "guard": {
+          "edit_2": "original",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_2": "patched"
+        },
+        "frame": [
+          "edit_0",
+          "edit_1",
+          "source_binding",
+          "checkpoint"
+        ]
+      },
+      {
+        "id": "reverse_2",
+        "guard": {
+          "edit_2": "patched",
+          "source_binding": "current",
+          "checkpoint": "present"
+        },
+        "effect": {
+          "edit_2": "original"
+        },
+        "frame": [
+          "edit_0",
+          "edit_1",
+          "source_binding",
+          "checkpoint"
+        ]
+      }
+    ]
+  },
+  "start": {
+    "edit_0": "original",
+    "edit_1": "original",
+    "edit_2": "original",
+    "source_binding": "current",
+    "checkpoint": "present"
+  },
+  "goal": {
+    "edit_0": "patched",
+    "edit_1": "patched",
+    "edit_2": "patched",
+    "source_binding": "current",
+    "checkpoint": "present"
+  },
+  "baseline": {
+    "edit_0": "original",
+    "edit_1": "original",
+    "edit_2": "original",
+    "source_binding": "current",
+    "checkpoint": "present"
+  },
+  "forward_limit": 3,
+  "return_limit": 3
+}

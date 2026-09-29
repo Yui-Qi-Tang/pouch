@@ -1,0 +1,398 @@
+[
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_A",
+      "rotate_B",
+      "validate_pair",
+      "publish_manifest"
+    ],
+    "cost": 5
+  },
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_B",
+      "rotate_A",
+      "validate_pair",
+      "publish_manifest"
+    ],
+    "cost": 5
+  },
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_A",
+      "rotate_B",
+      "retire_K0",
+      "validate_pair",
+      "publish_manifest"
+    ],
+    "cost": 6
+  },
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_A",
+      "rotate_B",
+      "validate_pair",
+      "retire_K0",
+      "publish_manifest"
+    ],
+    "cost": 6
+  },
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_B",
+      "rotate_A",
+      "retire_K0",
+      "validate_pair",
+      "publish_manifest"
+    ],
+    "cost": 6
+  },
+  {
+    "states": [
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_absent",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K0",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K0",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "none"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_present",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "draft",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      },
+      {
+        "cipher_A": "A@K1",
+        "cipher_B": "B@K1",
+        "manifest": "published_v1",
+        "new_key": "K1_present",
+        "old_key": "K0_absent",
+        "validation": "A@K1+B@K1"
+      }
+    ],
+    "actions": [
+      "provision_K1",
+      "rotate_B",
+      "rotate_A",
+      "validate_pair",
+      "retire_K0",
+      "publish_manifest"
+    ],
+    "cost": 6
+  }
+]

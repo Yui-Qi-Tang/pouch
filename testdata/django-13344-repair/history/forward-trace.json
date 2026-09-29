@@ -1,0 +1,38 @@
+{
+  "states": [
+    {
+      "edit_0": "original",
+      "edit_1": "original",
+      "edit_2": "original",
+      "source_binding": "current",
+      "checkpoint": "present"
+    },
+    {
+      "edit_0": "patched",
+      "edit_1": "original",
+      "edit_2": "original",
+      "source_binding": "current",
+      "checkpoint": "present"
+    },
+    {
+      "edit_0": "patched",
+      "edit_1": "patched",
+      "edit_2": "original",
+      "source_binding": "current",
+      "checkpoint": "present"
+    },
+    {
+      "edit_0": "patched",
+      "edit_1": "patched",
+      "edit_2": "patched",
+      "source_binding": "current",
+      "checkpoint": "present"
+    }
+  ],
+  "actions": [
+    "apply_0",
+    "apply_1",
+    "apply_2"
+  ],
+  "cost": 3
+}

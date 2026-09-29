@@ -1,0 +1,47 @@
+{
+  "schema_version": "pouch-sources/v1",
+  "authority_sha256": "69e7489f7174cab01be065d3e515f87a2cde279681ffe58898d22f56cb0d4f78",
+  "request_id": "django-13344-repair-go-20260929-01",
+  "sources": [
+    {
+      "id": "lab:h13:django-13344:model",
+      "file": "sources/model.json",
+      "sha256": "6a8fa1ac52ba6ac99df474c779fa51fc377ef089dc4f8e5f409b137f9ed34644"
+    },
+    {
+      "id": "lab:h13:django-13344:materializer",
+      "file": "sources/materializer-result.json",
+      "sha256": "8cf9fc8936c1236244bca642b7a90e7403f2bb6ee772367d1b01c91e5d935437"
+    },
+    {
+      "id": "lab:h13:django-13344:source:0",
+      "file": "sources/source-0.py",
+      "sha256": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051"
+    },
+    {
+      "id": "lab:h13:django-13344:patch:0",
+      "file": "sources/edit-0.patch",
+      "sha256": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5"
+    },
+    {
+      "id": "lab:h13:django-13344:source:1",
+      "file": "sources/source-1.py",
+      "sha256": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127"
+    },
+    {
+      "id": "lab:h13:django-13344:patch:1",
+      "file": "sources/edit-1.patch",
+      "sha256": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f"
+    },
+    {
+      "id": "lab:h13:django-13344:source:2",
+      "file": "sources/source-2.py",
+      "sha256": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b"
+    },
+    {
+      "id": "lab:h13:django-13344:patch:2",
+      "file": "sources/edit-2.patch",
+      "sha256": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd"
+    }
+  ]
+}

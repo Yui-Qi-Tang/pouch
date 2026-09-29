@@ -1,0 +1,26 @@
+[
+  {
+    "id": "edit_0",
+    "path": "django/contrib/sessions/middleware.py",
+    "patch": "edit-0.patch",
+    "patch_sha256": "7333a9d76042f60db27fd964a3cb6d64641b83b136bc87e38ecf6bb8a68480a5",
+    "source_sha256": "d8d7862fd3137b15c516dff9318a252a24a39c166ea8f6c70eb3d0444f5c7051",
+    "url": "https://raw.githubusercontent.com/django/django/e39e727ded673e74016b5d3658d23cbe20234d11/django/contrib/sessions/middleware.py"
+  },
+  {
+    "id": "edit_1",
+    "path": "django/middleware/cache.py",
+    "patch": "edit-1.patch",
+    "patch_sha256": "51b1d1724e4dea46d8e4cf9a98c0cc5b5c8d45eea4efc459536c7f7397fc9d4f",
+    "source_sha256": "e1d81461ecd23b123e3c46587e074e61a54f99822626684a14f4348fd1063127",
+    "url": "https://raw.githubusercontent.com/django/django/e39e727ded673e74016b5d3658d23cbe20234d11/django/middleware/cache.py"
+  },
+  {
+    "id": "edit_2",
+    "path": "django/middleware/security.py",
+    "patch": "edit-2.patch",
+    "patch_sha256": "1bc3d7b4ab103500530d177fdde49e379f22d0d4a09c8dc76761c62feede8bfd",
+    "source_sha256": "3f54c48284e8516ca7c516771a6906b582e28a0dfa7b15ac441a05f5bf96c32b",
+    "url": "https://raw.githubusercontent.com/django/django/e39e727ded673e74016b5d3658d23cbe20234d11/django/middleware/security.py"
+  }
+]

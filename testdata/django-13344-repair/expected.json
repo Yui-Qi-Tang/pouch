@@ -1,0 +1,12 @@
+{
+  "scope": "all simple first-hit forward paths of length 0..3; one separately solved shortest return per distinct endpoint",
+  "forward_paths": 6,
+  "forward_steps": 3,
+  "distinct_endpoints": 1,
+  "return_steps": 3,
+  "solver_queries": 14,
+  "sat": 7,
+  "unsat": 7,
+  "physical_demo": "all six Go forward paths plus their saved returns, on separate copies of exactly three files",
+  "historical_official_status": "FAIL / CONTROL_REPRODUCTION_MISMATCH"
+}
