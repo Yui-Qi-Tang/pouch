@@ -25,6 +25,7 @@ p = argparse.ArgumentParser()
 p.add_argument('--ahe-repo', type=Path)
 p.add_argument('--work', required=True, type=Path)
 p.add_argument('--publish', action='store_true')
+p.add_argument('--discovery-only', action='store_true', help='provision and pin public tools without loading the default examples')
 p.add_argument('--stop', action='store_true')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[1]
@@ -117,6 +118,9 @@ try:
     head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=a.ahe_repo,text=True).strip()
     (work/'build-identity.json').write_text(json.dumps({'ahe_head':head,'checkout':checkout_identity,'binaries':{name:hashlib.sha256(path.read_bytes()).hexdigest() for name,path in binaries.items()},'fixture':'fresh PostgreSQL cluster; no operational database accessed'},indent=2))
     test('^TestNativeDiscovery$', 'native-discovery')
+    if a.discovery_only:
+        print(json.dumps({'status':'DISCOVERY_READY','run_id':run_id}))
+        sys.exit(0)
     test('^TestNativeSources$', 'native-sources')
     print(json.dumps({'status':'SOURCES_READY','work_dir':str(work),'run_id':run_id,'cases':['synthetic-key-rotation','django-13344'],'next':'Run Pouch solve on each new authority.json/sources.json into CASE/result, then --publish, then --stop.'}))
 except Exception as exc:
