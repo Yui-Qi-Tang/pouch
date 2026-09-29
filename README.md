@@ -27,6 +27,8 @@ The first Go acceptance uses one existing synthetic key-rotation model and one D
 
 The separate [Django file-repair demo](docs/django-13344-repair-demo.md) imports the Lab H13 three-file edit model. It searches and validates apply/reverse paths in Go, then uses an explicit example adapter on disposable file copies. This is distinct from the first Django observation/staging model and its `clear_staging` operation.
 
+The latest file-repair record also completed [AHE saving and fresh readback](artifacts/ahe-repair-integration/pouch-native-25915315729c/REPORT.md): six model results and six separate recorded-execution bindings, with exact source/model/package/file hashes. This is an isolated fixed-example integration, with no new patch execution or official test. The [external review](docs/repair-ahe-review.md) accepted the bounded claim; it did not independently rerun the experiment.
+
 Existing versioned JSON and typed Go structures remain the boundary. Hashes identify exact bytes. Source graph data and caller-owned `authority.json` remain separate; neither topology nor successful persistence establishes source-to-rule semantic coverage.
 
 ## Build and local search
