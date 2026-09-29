@@ -101,3 +101,31 @@ coverage, lifecycle currentness, official SWE runtime behavior, or physical
 restore. The accompanying report records the two earlier fixture setup failures,
 actual dirty-checkout/binary identity, and the supplementary-snapshot retention
 limitation.
+
+## Latest recorded file-repair integration
+
+The separate fixture `pouch-native-25915315729c` connects the already completed
+Django 13344 three-file execution to native AHE. It saves eight original artifacts
+and the complete execution log as lossless `gzip+base64` source envelopes, checks
+the decoded bytes against independently pinned originals, revalidates six
+identity-rebound packages, and uses `Prepare` / `Submit` / `Review` / `Admit` for
+six model results. A scoped Go test harness then saves six separate
+`recorded_file_replay_binding` derived claims, each requiring its matching model
+result and the complete execution-log source. A final Query checks all twelve.
+
+The production model adapter API is unchanged. The execution-record binding is
+an opt-in example integration, not a shipped general physical-repair validator.
+Raw file hashes, envelope statement hashes and native receipts are distinct.
+All approvals are TEST APPROVAL STUB in a new isolated DB; no production DB is
+accessed, no new repair/solver/runtime test is run, and no historical result is
+relabelled. The [report and complete public payloads](../artifacts/ahe-repair-integration/pouch-native-25915315729c/REPORT.md) retain exact
+reviews, parents, admission receipts and final readbacks.
+
+For this fixed fixture only, provision with the existing bootstrap's
+`--discovery-only` option, set `POUCH_AHE_NATIVE_CONFIG` to the generated private
+config and `POUCH_AHE_TEST_APPROVAL=isolated-synthetic-public-fixtures-only`, then
+run `go test ./internal/ahe -run '^TestNativeRepairPublication$' -count=1`.
+Use a new owned cluster; the test refuses to reuse its result directory. Stop it
+with the bootstrap `--stop` option before running `scripts/ahe-repair-export.py`.
+The source constants and frozen plan deliberately pin this historical input;
+changing them is a new experiment, not a generic importer invocation.
