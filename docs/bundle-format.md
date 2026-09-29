@@ -17,7 +17,7 @@ The local source manifest has this separate schema:
 
 Source IDs/digests must exactly match the authority. Paths are relative to the manifest directory and are confined with `os.OpenRoot`; absolute paths, traversal, escaping symlinks, duplicate IDs, missing/unknown fields and altered bytes are rejected. The portable run copies the original authority and exact selected source bytes.
 
-Optional canonical graphs are separately pinned. Selected node IDs must have explicit `content_sha256` attributes matching the authority. AHE graph snapshots can be projected independently; supplemental source record bindings must be mapped explicitly before a graph becomes a planning display. Without a graph, the generated evidence view has selected record nodes and no inferred edges, with absence marked unknown.
+Optional canonical graphs are separately pinned. Every selected node must bind to its authority source digest, either through an explicit `content_sha256` attribute or a native `source_claim.payload_ref` resolved to `payloads[].claim`. Native claim text is hashed as exact decoded UTF-8; any supplied inline content or digest must agree. Invalid bindings fail before SAT starts, and the original graph bytes remain unchanged. See the [graph binding contract](../internal/run/README.md#optional-pinned-graph-input). Without a graph, the generated evidence view has selected record nodes and no inferred edges, with absence marked unknown.
 
 ## Shared result
 

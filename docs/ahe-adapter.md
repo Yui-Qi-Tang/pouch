@@ -55,6 +55,18 @@ SHA-256 of exact `statement_text` UTF-8**. It does not bind all AHE metadata,
 lifecycle state, invalidation state, or a global currentness cut. This digest also
 differs from the intake envelope's `sha256:`-prefixed raw-content hash.
 
+The original `ArtifactBytes` may also be supplied to `solve --graph`, with
+`ArtifactSHA256` as `--graph-sha256`. The run layer resolves each selected
+`source_claim.payload_ref` to `payloads[].claim` and hashes that exact decoded
+UTF-8 statement against caller-owned `source_binding`. It does not use the
+payload's `span` or add synthetic digest fields to the native graph. Conflicting
+inline content/digests, malformed references and duplicate payload IDs fail
+before SAT starts. See the [full binding rules](../internal/run/README.md#optional-pinned-graph-input).
+The source manifest and explicit model authority are still required; this does
+not compile graph relations into operations or establish an atomic currentness
+snapshot. Extract the original bytes from the adapter response, not a JSON
+reserialization of its convenience `Artifact` field.
+
 ## Explicit result review and admission
 
 1. `Prepare` independently validates the exact package against caller-held
@@ -91,35 +103,26 @@ and readbacks use the real public MCP tools. Ordinary `go test ./...` skips thes
 native stages unless explicitly configured. Fixture approvals are labelled
 `TEST APPROVAL STUB`, never human or semantic certification.
 
-The completed local fixture `pouch-native-741478ef7aa1` covers key rotation and
-Django 13344: nine source admissions/readbacks, eight newly searched packages,
-four return and four no-return conclusions, and eight derived admissions with
-exact fresh readback. See the portable [acceptance report](../artifacts/ahe-integration/pouch-native-741478ef7aa1/REPORT.md).
+These opt-in tests exercise actual MCP processes and a disposable PostgreSQL
+store. Their bounded results do not establish original-problem coverage,
+lifecycle currentness, official SWE runtime behavior or physical restoration.
+Detailed per-run reports are local ignored output; [project status](STATUS.md)
+records the current verification scope.
 
-This is bounded integration acceptance. It does not prove original-problem
-coverage, lifecycle currentness, official SWE runtime behavior, or physical
-restore. The accompanying report records the two earlier fixture setup failures,
-actual dirty-checkout/binary identity, and the supplementary-snapshot retention
-limitation.
+## Optional recorded file-repair test
 
-## Latest recorded file-repair integration
+`TestNativeRepairPublication` validates a fixed existing Django execution record,
+rebinds its source identities, and persists model results plus separate
+`recorded_file_replay_binding` claims through native review/admission and fresh
+readback. It checks decoded source envelopes against the pinned original bytes.
+The record-binding harness is an example integration, not a general production
+physical-repair validator. It does not execute new repairs or official tests.
 
-The separate fixture `pouch-native-25915315729c` connects the already completed
-Django 13344 three-file execution to native AHE. It saves eight original artifacts
-and the complete execution log as lossless `gzip+base64` source envelopes, checks
-the decoded bytes against independently pinned originals, revalidates six
-identity-rebound packages, and uses `Prepare` / `Submit` / `Review` / `Admit` for
-six model results. A scoped Go test harness then saves six separate
-`recorded_file_replay_binding` derived claims, each requiring its matching model
-result and the complete execution-log source. A final Query checks all twelve.
-
-The production model adapter API is unchanged. The execution-record binding is
-an opt-in example integration, not a shipped general physical-repair validator.
-Raw file hashes, envelope statement hashes and native receipts are distinct.
-All approvals are TEST APPROVAL STUB in a new isolated DB; no production DB is
-accessed, no new repair/solver/runtime test is run, and no historical result is
-relabelled. The [report and complete public payloads](../artifacts/ahe-repair-integration/pouch-native-25915315729c/REPORT.md) retain exact
-reviews, parents, admission receipts and final readbacks.
+Raw file hashes, envelope statement hashes and native receipts remain distinct.
+Approvals are TEST APPROVAL STUB in a new isolated DB. The full historical
+`artifacts/go-repair-20260929-01` directory is required; follow the
+[archive guide](artifacts.md) if it is absent. Ordinary tests use the smaller
+`testdata/recorded-repair` subset instead.
 
 For this fixed fixture only, provision with the existing bootstrap's
 `--discovery-only` option, set `POUCH_AHE_NATIVE_CONFIG` to the generated private
