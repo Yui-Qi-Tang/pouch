@@ -20,7 +20,10 @@ import (
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
-// Run dispatches commands and returns 0 success, 1 semantic rejection, 2 incomplete/error.
+// Run dispatches commands and writes command-specific stdout, usually JSON.
+// It returns 0 for completion, 1 for solve/verify model rejection, and 2 for
+// incomplete work or errors. Other handlers also map semantic errors to 2.
+// The package-local README.md defines output shapes and status/exit meanings.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "usage: pouch solve|project|verify|render|ahe-discover|ahe-read|ahe-stage|ahe-admit|version")
@@ -123,6 +126,11 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
+	evidence := run.Bundle{RequestID: *request}
+	if e = run.AttachEvidence(&evidence, in, graphRaw, *graphHash, *dir); e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
 	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout})
 	if e != nil {
 		fmt.Fprintln(errout, e)
@@ -132,10 +140,8 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	defer cancel()
 	result, searchErr := planning.Search(ctx, in.Authority.Contract(), runner, planning.Options{MaxPaths: *maxPaths, MaxQueries: *maxQueries})
 	bundle, certErr := run.Certify(ctx, in, result, *dir)
-	if e = run.AttachEvidence(&bundle, in, graphRaw, *graphHash, *dir); e != nil {
-		fmt.Fprintln(errout, e)
-		return 2
-	}
+	bundle.EvidenceMatrix = evidence.EvidenceMatrix
+	bundle.EvidenceScope = evidence.EvidenceScope
 	if e = run.SaveBundle(*dir, bundle); e != nil {
 		fmt.Fprintln(errout, e)
 		return 2

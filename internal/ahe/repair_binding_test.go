@@ -27,6 +27,7 @@ const repairAuthority = "69e7489f7174cab01be065d3e515f87a2cde279681ffe58898d22f5
 const repairBundle = "499e0065efdbe8ab75de9256ba83bb5ec6ab42d5a6689a5e4791055153b86d27"
 const repairReport = "102ec1aed67c316a053e4d68f5db64147d25acfd5c8b544fa92fb46dba8188d1"
 const repairManifest = "e28cb567e514d3dd376c138dc1bd76e89e23a7b5a75944b13ae4d2ea51d9c4ad"
+const repairFixtureManifest = "8b737c48f816f1f0d2b9b90ab4f36d975f479b0708938cbefc53cd757a2deb69"
 const repairRequest = "django-13344-repair-go-20260929-01"
 const repairSourcePrefix = "lab:h13:django-13344:"
 
@@ -98,8 +99,14 @@ func repairDecode(t *testing.T, raw []byte, value any) {
 
 func loadRepairInput(t *testing.T, project string) repairInput {
 	t.Helper()
-	base := filepath.Join(project, repairRun)
-	manifest := repairRead(t, filepath.Join(base, "manifest.json"), repairManifest)
+	return loadRepairFiles(t, filepath.Join(project, repairRun), repairManifest, 205)
+}
+
+// loadRepairFiles checks either the full native-run inventory or the explicitly
+// selected default-test fixture, then performs the same record-binding checks.
+func loadRepairFiles(t *testing.T, base, manifestHash string, fileCount int) repairInput {
+	t.Helper()
+	manifest := repairRead(t, filepath.Join(base, "manifest.json"), manifestHash)
 	var m struct {
 		Files []struct {
 			ID     string `json:"id"`
@@ -108,7 +115,7 @@ func loadRepairInput(t *testing.T, project string) repairInput {
 		} `json:"files"`
 	}
 	repairDecode(t, manifest, &m)
-	if len(m.Files) != 205 {
+	if len(m.Files) != fileCount {
 		t.Fatal("wrong frozen inventory")
 	}
 	seen := map[string]bool{}
@@ -285,7 +292,7 @@ func TestRepairPublicationBindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := loadRepairInput(t, project)
+	in := loadRepairFiles(t, filepath.Join(project, "testdata", "recorded-repair"), repairFixtureManifest, 18)
 	for id, raw := range in.Inputs.Content {
 		enc, err := encodeRepairArtifact(id, raw)
 		if err != nil {

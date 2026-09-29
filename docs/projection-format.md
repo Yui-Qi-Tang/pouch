@@ -40,3 +40,13 @@ Tests include an unchanged copy of the Lab H2 synthetic fixture at
 `internal/projection/testdata/h2-artifact.json`, SHA-256
 `e4b92c002656d881868ada4eab6f773a1ee549a973701f721467b0913c987f9b`.
 Its synthetic provenance is retained; it is not observed or admitted evidence.
+
+## Binding a graph to a solve request
+
+Projection itself does not interpret the opaque payload records. The optional
+`solve --graph` input additionally uses the [run source-binding contract](../internal/run/README.md#optional-pinned-graph-input)
+to match every authority-selected source. It supports inline content digests and
+`source_claim` nodes referencing `payloads[].claim`. Supplied content is hashed;
+a declared digest cannot override conflicting content. This preflight occurs
+before SAT work. The saved graph and matrix's source hash continue to identify
+the original bytes, not a decorated or reserialized native artifact.

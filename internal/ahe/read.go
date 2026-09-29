@@ -34,15 +34,18 @@ type View struct {
 }
 
 // Snapshot preserves materialized evidence; its handle alone is not evidence.
-// A complete bounded view never establishes global absence.
+// A complete bounded view never establishes global absence. CLI ahe-read
+// prints this provider-specific wrapper; it is not a planning input contract.
+// Hash scopes, nullable View flags and field values are defined in README.md.
 type Snapshot struct {
-	SchemaVersion  string          `json:"schema_version"`
-	View           View            `json:"view"`
-	Artifact       json.RawMessage `json:"artifact"`
-	ArtifactBytes  []byte          `json:"artifact_bytes_base64"`
-	RawResponse    []byte          `json:"raw_response_base64"`
-	ResponseSHA256 string          `json:"response_sha256"`
-	ArtifactSHA256 string          `json:"artifact_sha256"`
+	SchemaVersion string          `json:"schema_version"`
+	View          View            `json:"view"`
+	Artifact      json.RawMessage `json:"artifact"`
+	ArtifactBytes []byte          `json:"artifact_bytes_base64"`
+	// Exact tool structuredContent bytes, not the full JSON-RPC envelope.
+	RawResponse    []byte `json:"raw_response_base64"`
+	ResponseSHA256 string `json:"response_sha256"`
+	ArtifactSHA256 string `json:"artifact_sha256"`
 }
 
 func ReadSnapshot(ctx context.Context, query *Profile, req ReadRequest) (Snapshot, error) {

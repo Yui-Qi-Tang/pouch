@@ -11,9 +11,12 @@ import (
 
 // Variable is the semantic identity of a one-based DIMACS variable.
 type Variable struct {
-	ID        int    `json:"id"`
-	Kind      string `json:"kind"`
-	Time      int    `json:"time"`
+	ID int `json:"id"`
+	// state, action, or different; see README.md.
+	Kind string `json:"kind"`
+	// Zero-based state time or action transition start.
+	Time int `json:"time"`
+	// Later state time for different; otherwise unused.
 	OtherTime int    `json:"other_time,omitempty"`
 	Field     string `json:"field,omitempty"`
 	Value     string `json:"value,omitempty"`
@@ -21,6 +24,9 @@ type Variable struct {
 }
 
 // CNF retains both exact clauses and their variable interpretation.
+// Clause literals are signed one-based IDs, never zero; an empty clause is false.
+// The different helper witnesses inequality only when true; false does not
+// assert equality. Its meaning and unused Variable fields are in README.md.
 type CNF struct {
 	Variables []Variable `json:"variables"`
 	Clauses   [][]int    `json:"clauses"`
