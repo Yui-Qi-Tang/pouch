@@ -1,5 +1,7 @@
 # Pouch
 
+<img src="assets/pouch-icon.png" alt="Pouch mascot wearing round glasses" width="280">
+
 **Explore possible paths. Check each step. Find a way back.**
 
 Pouch is a standalone Go tool for planning changes from evidence. Give it a source snapshot, explicit operation rules, an initial state and a goal. It searches for legal paths, shows how the state changes, and separately searches for a return to your chosen baseline.
