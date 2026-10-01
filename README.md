@@ -56,6 +56,14 @@ Set the tool paths, trusted hashes and request ID before running. The output dir
 
 `pouch verify` checks a candidate package against caller-owned authority. `pouch project` converts a supported evidence graph to a matrix representation. `pouch render` renders an existing bundle; rendering does not revalidate its claims. See the [input and bundle format](docs/bundle-format.md) and [search/tool contract](docs/search-format.md) for commands, schemas, limits and exit statuses.
 
+## Continuous integration
+
+[GitHub Actions](.github/workflows/ci.yml) runs on every push and pull request,
+and can also be started manually. It uses the Go version in `go.mod` on Linux
+and runs `go build ./...`, `go vet ./...`, and `go test -race -count=1 ./...`.
+External SAT/checker and native AHE integration tests remain opt-in and are
+skipped unless their test configuration is supplied.
+
 ## Using Pouch with AI
 
 An AI agent can use the CLI to explore a declared problem and inspect the structured result:
