@@ -1,67 +1,102 @@
-# Project status — 2026-09-30
+# Project status — 2026-10-04
 
-Version: `0.1.0-dev`, unreleased.
+Version: `0.1.0-dev`, unreleased. The candidate-workflow migration was based on
+`480aec39fbce2cca1ca4abbe3780f4fae3c00eca` for integration into `develop`.
 
-## Available capabilities
+## Current capabilities and verification
 
-- Provider-independent source files and caller-owned model/query authority.
-- Evidence graph ↔ matrix projection, with explicit selected-source content binding.
-- Declared operation matrices → CNF → bounded SAT forward-path enumeration.
-- Original-rule replay, independent path-set comparison, and separate recovery search or finite-model no-return checks.
-- Shared JSON results and offline HTML replay showing sources, assumptions, state changes and model-operation costs.
-- Optional AHE public stdio MCP adapter for read, local validation, pending submission, exact review, approved admission and fresh readback.
-- A fixed Django example adapter that applies/reverses known edits on disposable copies of three source files.
+The existing graph/matrix projection, bounded SAT path search, original-rule
+replay, separate model recovery, JSON/HTML reports and optional public AHE MCP
+adapter remain available. The model uses finite categorical string values,
+AND guards, constant effects, explicit frames and unit costs, with at most
+4,096 Cartesian states.
 
-The current executable model supports categorical string fields, AND guards,
-constant effects, explicit frames and unit costs, up to 4,096 Cartesian states.
-Evidence relationships do not automatically become operation rules.
+The new [candidate workflow](../internal/candidate/README.md) compiles explicit
+finite options and forbidden combinations, revalidates candidate packages,
+materializes pinned source templates into patches, and checks caller-pinned
+runtime observation records against source/model/package/patch/artifact hashes.
+It does not infer the repair grammar or semantic requirements from an issue.
+`RECORDED_CHECKS_PASS` means record consistency, not fresh execution, log
+authentication or native approval.
 
-## Verification scope
+AHE depth-zero snapshots with explicitly null edges are normalized only under
+checked zero-edge, nontruncated read scope. Original artifact bytes and hashes
+are preserved alongside separate projection bytes/hashes. Unknown topology is
+not interpreted as globally absent edges.
 
-Local verification on 2026-09-30 passed Go build, vet, uncached race
-tests, pinned real SAT/checker tests, and fresh isolated AHE MCP integration.
-Both key-rotation and Django observation/staging models were tested with the
-original native graph passed directly to `solve --graph`, followed by model
-validation, result admission and fresh readback. Approvals were explicit test
-stubs in a disposable database, not production approvals.
+The candidate-workflow regression completed its bounded evaluation with explicit engineering
+continuations: 25 historical SWE cases using known official repair fixtures,
+plus four existing Pylint finite-option combinations. All 29 completed arms passed
+the selected repair tests, tracked-file reversal and baseline behavior checks.
+The 25 cases contain 2,874 official scoring IDs; Pylint additionally checks all
+20 parameterized IDs per arm. This is a known-answer regression, not 25 blind
+repairs or evidence of newly discovered solutions.
 
-A separate integration revalidated and persisted the existing recorded three-file
-repair/reverse execution. It did not perform new repairs or official SWE tests.
-The recorded file-copy restoration is distinct from the staging model's
-`clear_staging` operation, which only resets model observations. The historical
-Django official-test control mismatch remains recorded; file restoration does
-not establish complete runtime repair correctness.
+The frozen search used 214 real solver queries (58 SAT, 156 UNSAT), with checked
+assignments/proofs and 29 separate model returns. After correcting opaque test
+ID handling, the final product regenerated all 26 authorities and 29 rendered
+outputs byte-for-byte and revalidated all runtime records. No new SAT searches
+were counted for that final compatibility check. Final build, vet and uncached
+race tests passed. Earlier setup/parser failures and one race fixture timeout
+are retained in the recorded migration report; no test expectations were relaxed.
 
-A separate fresh integration on 2026-09-30 used SWE-bench Verified
-`django__django-14089` with its known official patch. Nine solver queries and
-forward/return replay passed; the actual 44-test Django module showed the
-expected failing regression before the patch, all tests passing after it, and
-the expected failure after restoration. All 6,440 baseline file hashes and modes
-were restored. The model result and separate execution report were admitted and
-freshly read back through AHE MCP in an isolated database. This used a local
-Python environment, not the official SWE Docker evaluation harness; no new patch
-synthesis or general native execution validator is claimed. The execution report
-references the model hashes but has no native derived edge joining it to the
-model result.
+Fresh native AHE integration separately passed two fixed models: nine sources,
+eight derived admissions and eight fresh result readbacks, under explicit test
+approval stubs in a disposable database. Actual native null-edge normalization
+also passed with the final binary. The 29 new SWE runtime records were not all
+submitted as fresh native admissions. The owned test database and containers
+were stopped/removed.
 
-HTML generation and automated content checks passed. Actual browser interaction
-and visual acceptance remain unverified. This Go acceptance covers selected
-models; it is not acceptance of all twenty historical Lab cases.
+## Where the migrated capabilities live
 
-## Limits and next work
+| Capability | Product entry point | Boundary |
+|---|---|---|
+| Graph incidence projection | `project`, `internal/projection` | Preserves supported topology; does not derive action rules |
+| Matrix/CNF/SAT search and separate recovery | `solve`, `internal/planning`, `internal/validation` | Finite declared model, search policy and budgets |
+| Finite candidate compilation | `candidate-prepare` | Caller supplies options, constraints and source references |
+| Patch materialization | `candidate-materialize` | Checked package and baseline bytes; no patch application |
+| Runtime-record binding | `candidate-bind-runtime` | Exact supplied artifacts and observation consistency; no test execution |
+| Native evidence read and model-result storage | `ahe-read`, `ahe-stage`, `ahe-admit` | Public MCP plus explicit external approval; runtime bindings need a separate publication workflow |
+| Human and AI reports | `solve`, `render` | Saved model replay in HTML and JSON; no implicit execution report |
 
-Source binding establishes selected byte identity, not source truth, complete
-original-problem coverage or atomic lifecycle/currentness. Model recovery does
-not guarantee physical rollback, external side-effect restoration or technical-debt
-cost. Bounded absence and complete finite-model no-return remain distinct.
+## Boundaries and remaining work
 
-Remaining product work includes browser/display acceptance, a reusable execution
-adapter beyond the fixed example, and explicitly selected additional model ports.
-Auto mode, arbitrary patch synthesis, path merging and protobuf are deferred.
+Evidence identity does not establish source truth or complete original-problem
+coverage. The Pylint experiment's problem-specific semantic interpreter remains external; callers
+supply finite options and constraints. Model choice withdrawal is not physical
+restoration. Actual runtime results and restoration require their own execution
+evidence; the record binder checks only the declared observation scope.
+
+Generated HTML content and links were checked. New browser interaction/visual
+acceptance, arbitrary execution adapters, autonomous operation invention,
+complete problem understanding, external side-effect recovery, path merging,
+auto mode and protobuf are not claimed by this port.
 
 ## Documentation and local evidence
 
-The repository keeps product documentation, source code and small regression
-fixtures. Detailed run reports, review records, manifests and generated output
-remain local and ignored; see [output and archive handling](artifacts.md).
-Earlier failed or partial runs are retained without changing their outcomes.
+Source, maintained product documentation and small regression tests are tracked.
+Detailed run reports and generated evidence remain local and ignored. The
+2026-10-04 migration report and the maintained Lab/product migration ledger
+record the port and case-level results. This documentation follow-up does not
+rewrite frozen source/document hashes or add experiments; see
+[output and archive handling](artifacts.md). Historical results retain their
+original status and do not override the current conclusion above.
+
+---
+
+## Historical checkpoint — 2026-09-30
+
+The earlier product acceptance established graph-bound planning and public-MCP
+storage/readback for selected fixed models. It also persisted an existing
+recorded Django repair/reverse result; that publication did not run new repairs.
+
+A separate Django14089 run used its known official patch: the 44-test module
+failed as expected before repair, passed after repair, and reproduced the
+baseline failure after restoration. All 6,440 tracked file hashes and modes were
+restored. Model and execution statements were admitted and freshly read back
+through AHE, as separate records without a native derived edge joining them.
+It used a local Python environment, not the official SWE Docker harness.
+
+These are dated results, not new migration runs. Earlier control mismatches and
+inconclusive outcomes remain in their original records. Current implementation,
+verification and remaining boundaries are described above.

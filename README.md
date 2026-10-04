@@ -1,6 +1,8 @@
 # Pouch
 
-<img src="assets/pouch-icon.png" alt="Pouch mascot wearing round glasses" width="280">
+<p align="center">
+  <img src="assets/pouch-icon.png" alt="Pouch mascot wearing round glasses" width="280">
+</p>
 
 **Explore possible paths. Check each step. Find a way back.**
 
@@ -15,6 +17,7 @@ Version: **`0.1.0-dev`** — in development, unreleased.
 - **Possible forward paths:** enumerate simple paths that first reach the goal within your chosen bound; report incomplete searches explicitly.
 - **A separate recovery result:** a shortest model return, a checked finite-model no-return conclusion, or an inconclusive result. Reaching the goal alone does not establish recoverability.
 - **Inspectable reasoning:** source identities, assumptions, guards, effects, unchanged fields, per-step states and operation counts.
+- **Declared repair combinations:** compile finite options and constraints, materialize a checked choice into a patch, and bind separately produced execution records.
 - **Two views of one result:** an offline interactive HTML report for people, and a versioned JSON bundle for AI and other tools.
 
 For example, a change may reach its goal in two operations while returning to the baseline requires three. The report shows both routes. These costs count declared operations; real execution time and external side effects require an execution adapter and their own checks.
@@ -56,6 +59,23 @@ Set the tool paths, trusted hashes and request ID before running. The output dir
 
 `pouch verify` checks a candidate package against caller-owned authority. `pouch project` converts a supported evidence graph to a matrix representation. `pouch render` renders an existing bundle; rendering does not revalidate its claims. See the [input and bundle format](docs/bundle-format.md) and [search/tool contract](docs/search-format.md) for commands, schemas, limits and exit statuses.
 
+## Declared repair candidates
+
+The candidate workflow converts a caller-declared finite option space into the
+same matrix/SAT search used by `solve`, then renders only revalidated paths into
+patches. It can bind an external runner's test and restore observations to the
+exact source, model, package and patch hashes. It does not infer requirements
+from an issue or treat SAT success as runtime repair success.
+
+See [candidate inputs, commands and limits](internal/candidate/README.md).
+
+The steps are explicit: `candidate-prepare` creates the model, `solve` searches
+its choices, and `candidate-materialize` writes a patch into a new directory.
+A separately authorized runner applies, tests and restores it.
+`candidate-bind-runtime` then checks that runner's recorded evidence; it does
+not execute the patch or authenticate the logs. Candidate model returns withdraw
+selections, not changes in a real checkout.
+
 ## Continuous integration
 
 [GitHub Actions](.github/workflows/ci.yml) runs on every push and pull request,
@@ -74,6 +94,8 @@ An AI agent can use the CLI to explore a declared problem and inspect the struct
 4. **Inspect and verify:** read `bundle.json`, including `status`, `complete`, `set_check`, `diagnostics` and each path's `recovery_status`. Use `pouch verify` on a selected `package_file` against the original authority. One accepted package does not prove the whole set is complete.
 5. **Explain the result:** show the forward path, separate return or no-return evidence, operation counts, assumptions and remaining limits. Link `index.html` for human replay. If the result is incomplete, explain why rather than silently loosening the model or calling it impossible.
 
+For declared repair options, start with `candidate-prepare` and the independently pinned option-space file. Build the ordinary source manifest against the generated authority before searching. Materialization and runtime-record binding are separate steps; use the [candidate contract](internal/candidate/README.md) for their exact inputs.
+
 The [AI workflow and CLI examples](.claude/skills/pouch/references/workflow.md) cover inputs, exact commands, status interpretation and evidence follow-up. Actual execution and external publication require their own authorized workflow.
 
 For Claude Code, open this repository and invoke:
@@ -90,6 +112,7 @@ The project includes [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), and the [Po
 - [Architecture and specification](docs/ARCH.md)
 - [Theory: representation, search, replay and recovery](docs/THEORY.md)
 - [Current capabilities and verification scope](docs/STATUS.md)
+- [Candidate options, patch materialization and runtime-record binding](internal/candidate/README.md)
 - [Report output and optional test archives](docs/artifacts.md)
 
 ## License

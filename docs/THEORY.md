@@ -1,8 +1,8 @@
 # Pouch: Graphs, Matrices, SAT, and Verifiable Evolution
 
-Document version: `theory.1`; 2026-09-29. This document applies to the finite, deterministic model with complete state described in [ARCH](ARCH.md).
+Document version: `theory.2`; 2026-10-04. This document applies to the finite, deterministic model with complete state described in [ARCH](ARCH.md).
 
-This document defines the mathematical objects and validation obligations the product must follow. The Go code ported so far is the finite path/closure validator; graph projection, matrix/CNF encoding, SAT enumeration, and presentation remain unimplemented. The definitions, short derivations, and references below do not constitute a general correctness proof for the new encoder.
+This document defines the mathematical objects and validation obligations the product must follow. The Go product implements finite path/closure validation, graph projection, matrix/CNF encoding, SAT enumeration and HTML/JSON presentation. It also compiles caller-declared finite candidate spaces and binds materialized patches to external runtime records; it does not derive semantic constraints from raw evidence. The definitions, short derivations, and references below do not constitute a general correctness proof for the new encoder.
 
 ## 1. Three distinct graph concepts
 
@@ -113,6 +113,23 @@ Direct DFS set comparisons on small models can detect overblocking, missing path
 
 If the complete model has exactly N legal states and contains all information affecting future behavior, every reachable goal has a simple path of at most N−1 steps: a cycle between repeated states can be removed while leaving the suffix executable. This bound can support reachability decisions for that model. It cannot be assumed when H is below N−1, and N must not be replaced with the node count of a bounded evidence view. Enumerating every simple path still does not enumerate every walk that allows repetition.
 
+### Finite candidate combinations
+
+The optional candidate compiler treats a candidate as a tuple choosing one
+option from each declared group. It selects groups in a fixed order, then uses
+`submit_candidate` to reach the goal. A declared forbidden partial assignment
+prevents submission whenever the complete tuple matches it. Completed search
+and set checks cover the legal tuples of this supplied space under the query
+bounds; they do not cover edits absent from its options. The fixed selection
+order deliberately excludes permutations of the same choice tuple.
+
+Literal templates map a verified tuple to file contents. The complete space
+digest binds choices, constraints, source references and rendering text into
+the authority. This closes a byte-identity boundary, not a semantic proof that
+the tuple repairs the original program. An external runner must test the patch.
+The generated return withdraws selections in reverse group order; it describes
+selection-state recovery, not the execution of a reverse patch.
+
 ## 7. Step-by-step replay and negative evidence
 
 The receiver obtains the caller-confirmed sources, model, and query outside the candidate package, then checks:
@@ -181,6 +198,8 @@ This project has not established a Petri-net subclass mapping or ILP cost equiva
 | Replay under original rules | The path satisfies the current model | The result is necessarily recoverable or the original problem is fully covered |
 | Return path/complete closure | The result is recoverable or non-recoverable within the model | Real resources have been restored |
 | Complete-set comparison/enumeration exhaustion evidence | The set is complete within the specified policy and scope | All unknown actions or arbitrary program solutions are covered |
+| Materialization | The checked tuple rendered deterministically against pinned baseline files | The patch executed or repairs the original problem |
+| Runtime-record binding | Supplied artifacts and observations meet the declared hash/test/file checks | Logs are authentic, the parser is correct, or undeclared state was restored |
 | External admission/readback | The external system persisted the specified content | The external system necessarily ran the Pouch validator |
 
 Matrix precision cannot supply omitted original requirements. Source-to-rule and Goal coverage must separately identify supported items, assumptions, and omissions. PASS within a model does not establish that the entire original problem has been solved.

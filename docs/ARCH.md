@@ -1,8 +1,8 @@
 # Pouch Architecture & Specification
 
-Document version: `design.3`; project version: `0.1.0-dev`; 2026-09-29.
+Document version: `design.4`; project version: `0.1.0-dev`; 2026-10-04.
 
-This document records the agreed product direction and the first Go implementation. Exact implemented wire types live in the Go packages and format documents. Future objectives are marked explicitly; implementation acceptance is recorded separately.
+This document records the agreed product direction and the current Go implementation. Exact implemented wire types live in the Go packages and format documents. Future objectives are marked explicitly; implementation acceptance is recorded separately.
 
 ## 1. Purpose and responsibilities
 
@@ -46,6 +46,7 @@ cmd/pouch-validate/      Preserved standalone v1 validator CLI
 internal/validation/    Original authority, evaluator, replay, DFS/BFS and receipts
 internal/projection/    Provider-neutral canonical graph incidence matrices
 internal/planning/      Declared action matrices, symbolic CNF and bounded search
+internal/candidate/     Finite option compilation, materialization and record binding
 internal/sat/           Pinned external SAT/checker processes and raw artifacts
 internal/run/           Input bindings, independent certification and bundles
 internal/presentation/  Offline HTML generated from the bundle
@@ -101,6 +102,28 @@ The initial executable subset follows the ported validator: string enumerations,
 
 Any change to the model, sources, or Goal creates a new version/query. The validator obtains authoritative inputs outside the candidate package; the package must not define both the question and the answer. Hashes bind bytes. They do not establish authorization, source truth, or complete coverage of the original problem.
 
+### 3.4 Optional finite candidate space
+
+`pouch-candidate-space/v1` declares ordered option groups, source-attributed
+forbidden combinations, assumptions, baseline file hashes and literal full-file
+templates. `candidate-prepare` compiles this into the existing v1 authority;
+ordinary `solve` then uses the same matrix/CNF/SAT and original-rule checks.
+The compiler fixes group-selection order to enumerate combinations. It does not
+enumerate every file-edit order or derive the options and constraints from text.
+
+`candidate-materialize` revalidates a package against that generated authority
+and reads exact baseline bytes before writing a new patch/artifact directory.
+`candidate-bind-runtime` separately binds caller-pinned external observations
+to the source/model/package/patch and original artifact hashes. The candidate
+package depends on model validation, not AHE or a runtime executor. Exact fields,
+limits and status meanings are in the [candidate contract](../internal/candidate/README.md).
+
+The generated authority also pins the complete option-space digest. Changing
+renderer text or constraints therefore changes the problem identity. That
+identity does not prove the declared constraints faithfully express the issue.
+Withdrawing choices restores the model's selection baseline; physical file
+restoration still requires its own execution and observation record.
+
 ## 4. Communication with ahe-mcp
 
 The projects do not import each other's internal Go packages or share database write mechanisms. Pouch owns an optional AHE adapter; AHE does not own a Pouch encoder, validator, or dedicated admission gate.
@@ -110,6 +133,12 @@ The projects do not import each other's internal Go packages or share database w
 The optional adapter uses stdio MCP. It initializes the connection, discovers tools, and invokes general Query tools according to their actual schemas. `open_canonical_read_view` is the currently available entry point for bounded snapshots. Record and provenance tools may supplement the view when needed, with version consistency checked.
 
 Preserve the materialized artifact and scope, not just an in-process handle. Supplemental data outside the same snapshot must retain a separate identity; it must not be assembled into a falsely consistent snapshot. The AI specifies query intent and scope. Software transfers the complete graph, without replacing it with a model-generated summary.
+
+For the supported depth-zero `edges:null` case, the adapter retains original
+artifact bytes/hash and separately exports checked projection bytes/hash plus
+the named normalization. Feed the projection pair to `solve --graph`; do not
+relabel its digest as the original native digest. Missing topology and global
+absence remain different claims. See [read/hash semantics](ahe-adapter.md#read-and-hash-semantics).
 
 ### 4.2 Submission and review
 
@@ -136,7 +165,7 @@ The current v1 `source_binding` pins canonical node IDs and exact UTF-8 `stateme
 
 Implemented data flow: snapshot validation → graph projection/source mapping → declared action matrices → symbolic CNF → SAT enumeration → assignment/proof checking → replay under original rules → separate return search or complete non-recoverability certificate → result bundle.
 
-The direct evaluator/BFS/DFS and matrix/CNF encoder are implemented separately and must not read each other's answers. Small models receive complete comparisons between both approaches. Runtime validation uses trusted original rules, not a candidate's transition table.
+The direct evaluator/BFS/DFS and matrix/CNF encoder are implemented separately and must not read each other's answers. Small models receive complete comparisons between both approaches. Model-package validation uses trusted original rules, not a candidate's transition table.
 
 Individual path validity, set completeness, shortest cost, and recoverability are separate fields. A return path must start from the complete forward endpoint. Full baseline restoration must not be confused with equality of selected fields. When forward and return paths use separate queries, preserve their join-state and version bindings; do not claim acceptance of a combined query.
 
@@ -147,6 +176,12 @@ The result bundle must include source/model/query bindings, matrices and indexes
 HTML: evidence citations and typed relations, the init matrix, path selection, forward/return playback, guard evaluation, effects/frames, baseline differences, completeness, and original-problem coverage limits. Support/conflict relations that were not obtained must not be drawn as existing edges. State-trace matrices and original encoding matrices must be labeled separately. Source text is escaped and displayed as data, never executed as HTML or script. Exports use portable IDs and expose no local absolute paths.
 
 AI JSON: use the same bundle as HTML, retaining exact IDs, versions, statuses, evidence, and diagnostics. Natural-language summaries are supplemental presentation and must not alter machine judgments. Large sets may use pagination or streaming; mark them complete only when all completion evidence is available.
+
+Materialization and runtime bindings are separate versioned records, not fields
+silently added to a completed solve bundle. Materialization keeps its original
+`runtime_status=NOT_RUN`; a later `RECORDED_CHECKS_PASS` binding records checks
+on supplied observations. Neither regenerating HTML nor binding a record runs
+tests. AHE model-package staging does not automatically publish runtime bindings.
 
 ## 7. Expressing the absence of a path
 
@@ -195,11 +230,23 @@ The original notice is retained under `third_party/ahe-mcp/`. Detailed migration
 inventories and historical acceptance records are local evidence, separate from
 the product specification.
 
-## 11. Acceptance sequence
+## 11. Verification scope and change obligations
 
-1. Current port: fixed positive and rejection tests for the validator/CLI, Go build/test/vet, AHE `make verify`, and compilation with the integration tag to check for remaining imports.
-2. Go encoder/projection: fixed small-model round trips, complete one-step relation comparisons, and comparisons for all tested queries, including type and query-misbinding counterexamples.
-3. Search and return: multiple solutions of the same length, missing/duplicate paths, incorrect frames, and a counterexample that remains recoverable beyond the horizon; distinguish set checks from per-path checks.
-4. Adapters/presentation: start with local data, then general AHE MCP. Use one existing synthetic case and one SWE context to test persistence/readback, missing permissions, and interrupted transport, with HTML/JSON consistency checks.
+[STATUS](STATUS.md) records completed verification, including the known-answer
+SWE migration regression and separate fixed-model native integration. Detailed
+experiments remain local evidence. Keep these obligations when extending the
+product:
 
-Each phase makes claims only within its declared scope. Porting does not reopen original-problem coverage research, path merging, or unknown program synthesis.
+1. Validate strict input contracts, source/query identity and original-rule
+   replay, with positive and targeted rejection cases.
+2. Compare projection round trips and finite-model matrix/CNF behavior against
+   direct rules. Keep path validity, set completeness and recovery distinct.
+3. Check materialization against exact baseline bytes and runtime bindings
+   against the supplied artifact/test/file scope; do not substitute SAT success
+   for repair tests or model withdrawal for physical restoration.
+4. Exercise optional public-MCP persistence separately with explicit approval
+   and fresh readback. Distinguish HTML generation from browser acceptance.
+
+Porting does not establish complete original-problem coverage, path merging or
+unknown program synthesis. New semantic capabilities require explicit contracts
+and acceptance, rather than reinterpretation of frozen Lab inputs.

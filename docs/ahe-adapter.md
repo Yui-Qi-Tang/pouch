@@ -40,13 +40,21 @@ receipt and does not automatically resubmit it.
 
 `ReadSnapshot` materializes a bounded canonical read view, checks its scope,
 counts and snapshot identity, and retains the native `canonical-evidence-graph/v1`
-artifact. The native artifact is directly accepted by Pouch's projection decoder;
-no synthetic snapshot ID or silent field remapping is added.
+artifact. Supported native graphs pass the strict projection decoder unchanged.
+One explicit compatibility case is handled at the adapter boundary: `edges:null`
+becomes `edges:[]` only when the checked view has `max_depth=0`, `max_edges=0`,
+`edge_count=0`, `truncated=false` and `global_absence_inference_allowed=false`.
+Missing edges, null nodes or malformed topology remain errors. The generic graph
+decoder is not relaxed, and the bounded zero-edge view proves no global absence.
 
 `Snapshot.Artifact` is a structured convenience view. `ArtifactBytes` and
 `RawResponse` are byte copies exported as base64 so JSON pretty printing cannot
 change the bytes identified by `ArtifactSHA256` and `ResponseSHA256`. A truncated
-view stays explicitly truncated. Even a complete bounded view does not prove
+view stays explicitly truncated. `ProjectionBytes` / `ProjectionSHA256` are
+exported as `projection_bytes_base64` / `projection_sha256`. `normalization` is
+`none` when these bytes equal the original artifact, or
+`ahe-depth-zero-null-edges/v1` for the explicit conversion above. Preserve both
+representations and both hashes. Even a complete bounded view does not prove
 global absence.
 
 `ReadRecord` checks the exact canonical ID and admitted record identity. The
@@ -55,8 +63,10 @@ SHA-256 of exact `statement_text` UTF-8**. It does not bind all AHE metadata,
 lifecycle state, invalidation state, or a global currentness cut. This digest also
 differs from the intake envelope's `sha256:`-prefixed raw-content hash.
 
-The original `ArtifactBytes` may also be supplied to `solve --graph`, with
-`ArtifactSHA256` as `--graph-sha256`. The run layer resolves each selected
+Decode `projection_bytes_base64` into the exact file passed to `solve --graph`,
+and use `projection_sha256` as `--graph-sha256`. With `normalization=none`, this
+pair equals the original artifact pair; after normalization it does not.
+The run layer resolves each selected
 `source_claim.payload_ref` to `payloads[].claim` and hashes that exact decoded
 UTF-8 statement against caller-owned `source_binding`. It does not use the
 payload's `span` or add synthetic digest fields to the native graph. Conflicting
@@ -64,8 +74,9 @@ inline content/digests, malformed references and duplicate payload IDs fail
 before SAT starts. See the [full binding rules](../internal/run/README.md#optional-pinned-graph-input).
 The source manifest and explicit model authority are still required; this does
 not compile graph relations into operations or establish an atomic currentness
-snapshot. Extract the original bytes from the adapter response, not a JSON
-reserialization of its convenience `Artifact` field.
+snapshot. Extract the base64 byte copy, not a JSON reserialization of the
+convenience `Artifact` field. The matrix source hash identifies the projection
+input; the native artifact and response retain their own original identities.
 
 ## Explicit result review and admission
 
@@ -93,6 +104,13 @@ The library does not invent approval, an approver identity, missing evidence,
 a relaxed goal, or alternative rules. The current human-facing CLI has its own
 explicit supported-command boundary; library availability does not imply an
 interactive approval UI or automatic admission workflow has shipped.
+
+`ahe-stage` and `ahe-admit` accept model packages under the existing authority
+contract. A `pouch-runtime-binding/v1` record is not a substitute package and is
+not automatically published by `candidate-bind-runtime`. Persisting execution
+evidence requires a separate authorized review/publication workflow retaining
+the model, materialization and runtime bindings. The historical fixture below
+does not provide a general runtime-record publication command.
 
 ## Native acceptance fixture
 
