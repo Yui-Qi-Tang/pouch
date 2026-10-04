@@ -57,6 +57,14 @@ discovery is bounded at 32 pages and incoming messages at 16 MiB.
 | `Snapshot.RawResponse` | Exact tool `structuredContent` JSON bytes, emitted as `raw_response_base64`; not the entire stdio/JSON-RPC transcript. |
 | `Snapshot.ArtifactSHA256` | SHA-256 of ArtifactBytes. |
 | `Snapshot.ResponseSHA256` | SHA-256 of RawResponse. |
+| `Snapshot.ProjectionBytes` / `ProjectionSHA256` | Explicit matrix-input bytes and their exact digest; original artifact identity remains separate. |
+| `Snapshot.Normalization` | `none`, or `ahe-depth-zero-null-edges/v1` for a complete depth-zero view with zero requested/observed edges. |
+
+Only explicit `edges:null` in that checked complete zero-edge scope is converted
+to `[]`. Missing edges, null nodes, duplicate fields and malformed topology are
+rejected. Truncation or a nonzero edge/depth scope does not authorize conversion.
+The generic graph decoder remains strict. Retain both byte representations;
+never label the projection digest as the original AHE artifact digest.
 
 All adapter-generated SHA-256 strings above are lowercase hex. JSON formatting
 can change byte hashes, so the base64 copies matter. Identity checks do not

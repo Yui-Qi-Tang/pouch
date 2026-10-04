@@ -22,3 +22,12 @@ Use the [CLI workflow](.claude/skills/pouch/references/workflow.md) for complete
 - **Display validation:** distinguish HTML generation, automated content checks and actual browser interaction. Do not claim that path switching, forward/return replay controls or layout passed browser acceptance unless those interactions were performed and checked.
 
 Keep outputs in ignored run directories, preserve prior reports and manifests, and remove credentials and private host paths from material shared externally. Report generation does not authorize AHE publication, commit or push.
+
+## Candidate workflow
+
+Follow the shared candidate rules in [AGENTS.md](AGENTS.md#candidate-workflow)
+and the [CLI workflow](.claude/skills/pouch/references/workflow.md#declared-repair-candidates).
+Use `candidate-prepare` → ordinary `solve` → `candidate-materialize`; a separately
+authorized external runner supplies observations for `candidate-bind-runtime`.
+The ordinary HTML shows model selection/recovery. Deliver the materialization
+and runtime binding separately when explaining actual repair evidence.

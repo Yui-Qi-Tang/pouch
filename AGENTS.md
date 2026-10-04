@@ -8,6 +8,7 @@ Pouch is a standalone Go planner: evidence plus an explicit finite model become 
 - `docs/STATUS.md`: current implementation and the limits of completed acceptance.
 - `docs/ARCH.md` and `docs/THEORY.md`: architecture and model semantics.
 - `docs/bundle-format.md` and `docs/search-format.md`: exact inputs, outputs, search and tool contracts.
+- `internal/candidate/README.md`: finite options, templates, materialization and runtime-record binding.
 - `.claude/skills/pouch/references/workflow.md`: using the CLI to solve, inspect or validate a planning task.
 
 Read only what the task needs. Check the branch, HEAD and working tree before changes; preserve unrelated edits. Prefer code-graph discovery if available, validate its coverage, and read the current source when coverage is stale or incomplete. Do not assume a graph service or a particular local skill installation exists.
@@ -43,3 +44,17 @@ Continue within the user's authorized scope; do not request the same approval ag
 ## Agent responsibility
 
 The main agent owns the question, research, code, file/data operations, experiments, validation and final conclusions. Unless the user explicitly changes this division, use a subagent only to challenge a specific claim through text-only reasoning on supplied material. Provide the fixed assumptions, evidence, unknowns and counterexample criterion. The subagent must not use tools, research, read/write files, run commands or spawn agents. Its objections require the main agent's verification; agreement is not independent proof.
+
+## Candidate workflow
+
+For a caller-declared finite repair space, use `candidate-prepare`, ordinary
+`solve`, then `candidate-materialize`. Read `internal/candidate/README.md` for
+exact fields and bounds. Keep semantic constraint generation external and
+explicit. Materialization does not run or restore a checkout. Use a pinned
+external runner, then `candidate-bind-runtime` to check recorded evidence
+consistency; never describe that as fresh execution or native admission.
+The original materialization remains `NOT_RUN`; later execution is a separate
+record. A candidate model return withdraws choices, not physical file changes.
+Preserve the original AHE artifact and explicit projection byte hashes when
+using the depth-zero null-edge normalization. Emit HTML through the ordinary
+`solve`/`render` workflow, and keep generated evidence out of tracked source.

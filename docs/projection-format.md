@@ -4,7 +4,7 @@
 shape used by the synthetic feeding-policy fixture. It depends only on Go's standard library.
 
 A caller supplies `Decode(raw, expectedSHA256)` with the SHA-256 of the exact
-original bytes from outside the untrusted graph. The decoded snapshot owns its
+input bytes from outside the untrusted graph. The decoded snapshot owns its
 bytes and data; its accessors return copies. Reserializing a graph does not
 reproduce its original whitespace or digest.
 
@@ -27,7 +27,9 @@ edge attributes retain all non-topology fields. `Reconstruct(matrix)` requires
 one source, one target and one relation per edge and derives them from the cells.
 It rejects copied topology fields hidden in edge sidecars.
 
-The matrix `source_sha256` identifies the original snapshot. It does not
+The matrix `source_sha256` identifies the exact bytes supplied to `Decode`.
+For a normalized adapter input it is the projection digest, not the original
+native artifact digest. It does not
 authenticate a subsequently modified matrix or reconstructed graph. Consumers
 must compare reconstruction against the caller-bound original when asserting
 round-trip equality. No evidence edge becomes an action guard.
@@ -41,6 +43,15 @@ Tests include an unchanged synthetic feeding-policy fixture in
 `e4b92c002656d881868ada4eab6f773a1ee549a973701f721467b0913c987f9b`.
 Its synthetic provenance is retained; it is not observed or admitted evidence.
 
+## Explicit adapter normalization
+
+The generic decoder requires array-valued `nodes` and `edges`; an empty edge
+set is `[]`, not null or an omitted field. The optional AHE adapter handles one
+explicit depth-zero null-edge representation after checking the native scope.
+It keeps native bytes/hash and projection bytes/hash separately, with a named
+normalization record. See [AHE read/hash semantics](ahe-adapter.md#read-and-hash-semantics).
+This conversion does not assert the absence of edges outside that bounded view.
+
 ## Binding a graph to a solve request
 
 Projection itself does not interpret the opaque payload records. The optional
@@ -49,4 +60,6 @@ to match every authority-selected source. It supports inline content digests and
 `source_claim` nodes referencing `payloads[].claim`. Supplied content is hashed;
 a declared digest cannot override conflicting content. This preflight occurs
 before SAT work. The saved graph and matrix's source hash continue to identify
-the original bytes, not a decorated or reserialized native artifact.
+the supplied projection-input bytes. If an adapter normalized them, preserve
+the separately identified native artifact as provenance; do not relabel either
+digest or silently reserialize the graph before solving.

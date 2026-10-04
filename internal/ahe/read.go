@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Yui-Qi-Tang/pouch/internal/projection"
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
@@ -46,6 +47,10 @@ type Snapshot struct {
 	RawResponse    []byte `json:"raw_response_base64"`
 	ResponseSHA256 string `json:"response_sha256"`
 	ArtifactSHA256 string `json:"artifact_sha256"`
+	// Projection bytes are distinct from the unmodified provider artifact.
+	ProjectionBytes  []byte `json:"projection_bytes_base64"`
+	ProjectionSHA256 string `json:"projection_sha256"`
+	Normalization    string `json:"normalization"`
 }
 
 func ReadSnapshot(ctx context.Context, query *Profile, req ReadRequest) (Snapshot, error) {
@@ -99,7 +104,25 @@ func ReadSnapshot(ctx context.Context, query *Profile, req ReadRequest) (Snapsho
 	if json.Unmarshal(out.Artifact, &artifact) != nil || artifact.SchemaVersion != "canonical-evidence-graph/v1" || artifact.SnapshotID != v.SnapshotID || len(artifact.Nodes) != v.NodeCount || len(artifact.Edges) != v.EdgeCount || v.NodeCount > req.MaxNodes || v.EdgeCount > req.MaxEdges {
 		return s, errors.New("artifact and read descriptor mismatch")
 	}
-	return Snapshot{SchemaVersion: out.SchemaVersion, View: v, Artifact: bytes.Clone(out.Artifact), ArtifactBytes: bytes.Clone(out.Artifact), RawResponse: bytes.Clone(raw), ResponseSHA256: validation.Digest(raw), ArtifactSHA256: validation.Digest(out.Artifact)}, nil
+	projected, normalization, err := projectionInput(out.Artifact, v)
+	if err != nil {
+		return s, err
+	}
+	return Snapshot{SchemaVersion: out.SchemaVersion, View: v, Artifact: bytes.Clone(out.Artifact), ArtifactBytes: bytes.Clone(out.Artifact), RawResponse: bytes.Clone(raw), ResponseSHA256: validation.Digest(raw), ArtifactSHA256: validation.Digest(out.Artifact), ProjectionBytes: projected, ProjectionSHA256: validation.Digest(projected), Normalization: normalization}, nil
+}
+
+func projectionInput(raw []byte, v View) ([]byte, string, error) {
+	if _, err := projection.Decode(raw, validation.Digest(raw)); err == nil {
+		return bytes.Clone(raw), "none", nil
+	}
+	if v.MaxDepth != 0 || v.MaxEdges != 0 || v.EdgeCount != 0 || v.Truncated == nil || *v.Truncated || v.GlobalAbsenceInferenceAllowed == nil || *v.GlobalAbsenceInferenceAllowed {
+		return nil, "", errors.New("graph representation is not supported for this read scope")
+	}
+	converted, err := projection.NormalizeEmptyEdges(raw, validation.Digest(raw))
+	if err != nil {
+		return nil, "", err
+	}
+	return converted, "ahe-depth-zero-null-edges/v1", nil
 }
 
 // Record is a minimal checked projection; Raw retains every native provenance field.

@@ -19,6 +19,19 @@ Source IDs/digests must exactly match the authority. Paths are relative to the m
 
 Optional canonical graphs are separately pinned. Every selected node must bind to its authority source digest, either through an explicit `content_sha256` attribute or a native `source_claim.payload_ref` resolved to `payloads[].claim`. Native claim text is hashed as exact decoded UTF-8; any supplied inline content or digest must agree. Invalid bindings fail before SAT starts, and the original graph bytes remain unchanged. See the [graph binding contract](../internal/run/README.md#optional-pinned-graph-input). Without a graph, the generated evidence view has selected record nodes and no inferred edges, with absence marked unknown.
 
+## Optional declared candidate inputs
+
+`candidate-prepare` compiles a pinned `pouch-candidate-space/v1` into the same
+authority format. Build `sources.json` against that generated authority hash
+and request ID before ordinary `solve`. Its options and semantic constraints
+come from the caller, not from graph topology. See the [candidate contract](../internal/candidate/README.md).
+
+Materialization (`pouch-materialization/v1`) and external runtime binding
+(`pouch-runtime-binding/v1`) are separate outputs of later explicit commands.
+They do not modify the original solve bundle or its model-replay HTML. The
+materialization keeps `runtime_status=NOT_RUN`; a subsequent binding may report
+`RECORDED_CHECKS_PASS` for supplied records, without performing fresh execution.
+
 ## Shared result
 
 `pouch-bundle/v1` contains the original contract/source manifest, evidence and action matrices, bounded search ledger, forward paths, separate return searches, original-rule set check, per-path receipts, and diagnostic status. `index.html` embeds the same JSON data; its export reproduces that data. Rendering a supplied bundle is display only, not authentication or renewed verification.
@@ -45,7 +58,7 @@ Output directories must be new and files are not overwritten. Hash identity does
 
 `pouch ahe-discover --config query-command.json` only initializes/discovers tools. The file is an `ahe.Command` object with `path`, `args`, and optional `env`. Review the returned tool schemas and pin them in a separate local configuration before allowing calls.
 
-`pouch ahe-read --config profiles.json --request bounded-read.json` performs a bounded Query read. `profiles.json` contains `query`, `intake`, and `endpoints` objects, each with a `command` and a `pins` map of allowed tool name to exact input-schema SHA-256. A read only needs `query`. Credentials stay in private launcher files; these local configurations are not copied into bundles. The returned snapshot includes base64 exact bytes and hashes alongside convenient structured JSON.
+`pouch ahe-read --config profiles.json --request bounded-read.json` performs a bounded Query read. `profiles.json` contains `query`, `intake`, and `endpoints` objects, each with a `command` and a `pins` map of allowed tool name to exact input-schema SHA-256. A read only needs `query`. Credentials stay in private launcher files; these local configurations are not copied into bundles. The returned snapshot includes original artifact/response bytes and hashes, plus `projection_bytes_base64`, `projection_sha256` and `normalization`. Feed the exact projection bytes/hash to `solve --graph`, preserving native originals separately. See [adapter hash semantics](ahe-adapter.md#read-and-hash-semantics).
 
 `pouch ahe-stage` additionally requires `--authority`, `--authority-sha256`, `--request-id`, `--package`, `--intake-request-id`, and an explicit `--observed-at` RFC3339 timestamp. It validates the package and freshly queries source bindings before creating a pending proposal. It returns the exact native review for external inspection with `AWAITING_EXTERNAL_APPROVAL`.
 
