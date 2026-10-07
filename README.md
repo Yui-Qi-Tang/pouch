@@ -40,6 +40,41 @@ The current model supports finite categorical states, AND guards, constant effec
 
 Pouch works with local files and has no required evidence service, database or LLM. An optional [AHE adapter](docs/ahe-adapter.md) reads evidence and submits explicitly approved results for storage through public MCP tools.
 
+## Measured results
+
+Two evaluations tested different parts of Pouch's workflow: choosing repair
+combinations and carrying known repairs through testing and reversal. These
+results were recorded on **October 3–4, 2026**.
+
+| What was tested | Observed result | What was supplied |
+|---|---|---|
+| **Finding repair combinations** | From **32 configurations**, Pouch selected **4 distinct patches**. Each passed all **20 specified tests**, with no new search after test feedback. | One Pylint issue, 9 explicit requirements and existing edit templates |
+| **Repairing and restoring files** | **29 repair/reversal evaluations completed**: 25 SWE-bench cases plus 4 alternative patches for the same Pylint issue. Required repair tests passed, tracked file contents and permissions were restored, and baseline test results were reproduced. | Known official repair choices for the 25 cases, plus the 4 previously found alternatives |
+| **Checking the planned routes** | **214 SAT/UNSAT queries verified**, with **29 forward paths and 29 separately checked model returns** | Explicit finite models; real file restoration was checked separately by an execution runner |
+
+SWE-bench is a benchmark of real software issues. The 25 selected cases covered
+**2,874 benchmark scoring test IDs**. They tested Pouch's handling of supplied
+repairs, rather than its ability to solve unfamiliar issues unaided. The four
+Pylint patches were different combinations, not different edit orders, and had
+appeared in earlier research. They are working alternatives, not newly invented
+solutions.
+
+Of the 29 repair/reversal evaluations, 23 completed initially and 6 completed
+after fixes to the test tooling. The [detailed evaluation](docs/EVALUATION.md)
+provides per-case counts, inputs, limitations and evidence hashes.
+
+### Evidence support from AHE-mcp
+
+[AHE-mcp](https://github.com/Yui-Qi-Tang/ahe-mcp) provided identifiable source
+records and fresh evidence readbacks. After verification, **all 4 Pylint
+candidate result claims were saved and read back** through AHE. A separate
+integration check used **9 sources and 8 saved/read-back model results**.
+
+These storage checks are separate from repair execution: the 29 repair/reversal
+records were not all newly stored in AHE. AHE supports provenance and approved
+storage; Pouch checks the declared paths, and an external runner checks actual
+repairs. Pouch can also work without AHE.
+
 ## Build and use
 
 Requires Go **1.27.1**. The Go module uses only the standard library. SAT search additionally requires caller-supplied CaDiCaL and DRAT-trim executables pinned by SHA-256; standalone model validation does not.
@@ -111,6 +146,7 @@ The project includes [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), and the [Po
 
 - [Architecture and specification](docs/ARCH.md)
 - [Theory: representation, search, replay and recovery](docs/THEORY.md)
+- [Experimental results: combinations, repair and recovery](docs/EVALUATION.md)
 - [Current capabilities and verification scope](docs/STATUS.md)
 - [Candidate options, patch materialization and runtime-record binding](internal/candidate/README.md)
 - [Report output and optional test archives](docs/artifacts.md)
