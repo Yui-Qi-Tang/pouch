@@ -3,6 +3,10 @@
 Version: `0.1.0-dev`, unreleased. The candidate-workflow migration was based on
 `480aec39fbce2cca1ca4abbe3780f4fae3c00eca` for integration into `develop`.
 
+For measured results, all 25 case-level counts and the role of upstream AHE,
+see the [experimental evaluation](EVALUATION.md). That page separates repair
+combination search from known-repair regression.
+
 ## Current capabilities and verification
 
 The existing graph/matrix projection, bounded SAT path search, original-rule

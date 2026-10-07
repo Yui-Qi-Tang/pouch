@@ -5,6 +5,10 @@ These are run outputs, not product source. The whole `artifacts/` directory and
 `docs/acceptance/` are ignored. Other `docs/` files are ignored unless explicitly
 listed in `.gitignore` as maintained user, AI or developer documentation.
 
+The curated [experimental evaluation](EVALUATION.md) is maintained product
+documentation: it keeps result tables, scope and archive identities in Git while
+the underlying generated runs remain outside this repository.
+
 Ignoring an already tracked file is insufficient: it must also be removed from
 the Git index. Generated evidence is untracked, and the repository history was
 subsequently rewritten to remove generated output and detailed non-product
