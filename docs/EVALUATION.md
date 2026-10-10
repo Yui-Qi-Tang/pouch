@@ -254,6 +254,16 @@ interpreter was not ported into the generic Go core.
 
 ## Evidence identities
 
+Product-facing descriptions use study names instead of internal run labels.
+The labels on this page and in frozen test evidence remain for migration
+traceability. Evidence digests below are unchanged.
+
+The Product history was cleaned up on 2026-10-11. Product commit IDs below
+identify the original, pre-cleanup experiment snapshots retained in the
+separate history backup and Lab source records; they may no longer resolve
+in the rewritten Product branch. This does not relabel the binaries that ran
+the experiments or claim that the current source has their exact hashes.
+
 These are Lab archive identifiers, not files bundled with the Product or
 download links. Digests identify the exact original bytes used for this summary;
 they do not replace obtaining and checking the underlying artifacts. Shared

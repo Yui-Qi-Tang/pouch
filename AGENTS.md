@@ -25,7 +25,7 @@ Read only what the task needs. Check the branch, HEAD and working tree before ch
 
 ## Make scoped changes
 
-Keep documentation in English and the current project version in `README.md`. Use idiomatic Go, explicit types and small consumer-side interfaces; avoid new dependencies or abstractions unless the task needs them. Core planning/validation must not depend on provider, database or UI code. Consult applicable Go guidance when it is available.
+Keep documentation in English and the current project version in `README.md`. Use descriptive study names in product documentation, diagnostics and report prose. Keep internal experiment labels in the detailed evaluation and frozen provenance only; preserve original evidence bytes and hashes. Use idiomatic Go, explicit types and small consumer-side interfaces; avoid new dependencies or abstractions unless the task needs them. Core planning/validation must not depend on provider, database or UI code. Consult applicable Go guidance when it is available.
 
 For Go changes, format touched files, run the relevant tests, then the normal checks appropriate to the change:
 
