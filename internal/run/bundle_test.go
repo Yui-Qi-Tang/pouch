@@ -1,7 +1,9 @@
 package run
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,5 +105,82 @@ func TestManifestStrictness(t *testing.T) {
 		if e := decodeExact([]byte(raw), &m); e == nil {
 			t.Fatal("accepted malformed manifest")
 		}
+	}
+}
+
+func TestExpandedSourceManifest(t *testing.T) {
+	in := simpleInput(t, true, 1)
+	c := in.Authority.Contract()
+	c.SourceBinding = map[string]string{}
+	in.Content = map[string][]byte{}
+	in.Sources.Sources = []Source{}
+	for i := range 32 {
+		id := fmt.Sprintf("source:%d", i)
+		content := []byte(fmt.Sprintf("rule %d\n", i))
+		digest := validation.Digest(content)
+		c.SourceBinding[id] = digest
+		in.Content[id] = content
+		in.Sources.Sources = append(in.Sources.Sources, Source{ID: id, SHA256: digest})
+	}
+	var err error
+	in.AuthorityRaw, err = json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in.Sources.AuthoritySHA256 = validation.Digest(in.AuthorityRaw)
+	in.Authority, err = validation.NewAuthority(in.AuthorityRaw, in.Sources.AuthoritySHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	in, err = SaveInputs(in, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorityFile, manifestFile := filepath.Join(dir, "authority.json"), filepath.Join(dir, "sources.json")
+	loaded, err := ReadInputs(authorityFile, in.Sources.AuthoritySHA256, c.RequestID, manifestFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.Content) != 32 || !bytes.Equal(loaded.AuthorityRaw, in.AuthorityRaw) {
+		t.Fatal("expanded source inputs lost")
+	}
+	for id, content := range in.Content {
+		if !bytes.Equal(loaded.Content[id], content) {
+			t.Fatalf("source bytes changed: %s", id)
+		}
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*SourceManifest)
+	}{
+		{"missing", func(m *SourceManifest) { m.Sources = m.Sources[:31] }},
+		{"extra", func(m *SourceManifest) { m.Sources = append(m.Sources, m.Sources[0]) }},
+		{"duplicate", func(m *SourceManifest) { m.Sources[31] = m.Sources[0] }},
+		{"unknown", func(m *SourceManifest) { m.Sources[31].ID = "source:unknown" }},
+		{"digest", func(m *SourceManifest) { m.Sources[31].SHA256 = validation.Digest([]byte("changed")) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := in.Sources
+			m.Sources = append([]Source(nil), in.Sources.Sources...)
+			tc.mutate(&m)
+			raw, err := json.Marshal(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(dir, tc.name+".json")
+			if err := os.WriteFile(path, raw, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ReadInputs(authorityFile, in.Sources.AuthoritySHA256, c.RequestID, path); err == nil {
+				t.Fatal("altered source manifest accepted")
+			}
+		})
+	}
+	if err := os.WriteFile(filepath.Join(dir, in.Sources.Sources[31].File), []byte("changed"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadInputs(authorityFile, in.Sources.AuthoritySHA256, c.RequestID, manifestFile); err == nil {
+		t.Fatal("changed source bytes accepted")
 	}
 }
