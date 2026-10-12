@@ -3,6 +3,8 @@ package candidate
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"maps"
 	"os"
 	"os/exec"
@@ -132,5 +134,36 @@ func TestDiffEmptyAndNoFinalNewline(t *testing.T) {
 				t.Fatal(string(out), err, b.String())
 			}
 		}
+	}
+}
+
+func TestCandidateSourceBindingBounds(t *testing.T) {
+	for _, count := range []int{32, 33} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			s, _, _, _ := fixture(t)
+			for i := 1; i < count; i++ {
+				id := fmt.Sprintf("source:%d", i)
+				s.SourceBinding[id] = validation.Digest([]byte(id))
+			}
+			s.Constraints[0].Evidence = []string{"evidence", "source:31"}
+			raw, err := json.Marshal(s)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p, err := Prepare(raw, validation.Digest(raw))
+			if count == 33 {
+				var rejection *validation.Rejection
+				if !errors.As(err, &rejection) || rejection.Code != "AUTHORITY_CONTRACT" {
+					t.Fatalf("got %v, want AUTHORITY_CONTRACT", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !maps.Equal(p.validator.Contract().SourceBinding, s.SourceBinding) {
+				t.Fatal("candidate source bindings lost")
+			}
+		})
 	}
 }

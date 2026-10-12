@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"maps"
 	"strings"
 	"testing"
 )
@@ -143,4 +145,66 @@ func TestAuthorityModelBounds(t *testing.T) {
 			t.Fatal("invalid authority accepted")
 		}
 	}
+}
+
+func TestAuthoritySourceBindingBounds(t *testing.T) {
+	for _, count := range []int{0, 1, 8, 9, 12, 32, 33} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			c, p := fixture(t)
+			c.SourceBinding = map[string]string{}
+			for i := range count {
+				id := fmt.Sprintf("canon-node:source%d", i)
+				c.SourceBinding[id] = Digest([]byte(id))
+			}
+			raw := bytesOf(t, c)
+			a, err := NewAuthority(raw, Digest(raw))
+			if count == 0 || count == 33 {
+				code(t, err, "AUTHORITY_CONTRACT")
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(a.SourceIDs()) != count {
+				t.Fatal("source bindings lost")
+			}
+			p.AuthoritySHA256 = Digest(raw)
+			p.SourceBinding = c.SourceBinding
+			r, err := a.Validate(t.Context(), c.RequestID, bytesOf(t, p))
+			if err != nil || r.ForwardShortest != 1 || r.ReturnShortest != 1 {
+				t.Fatalf("%+v %v", r, err)
+			}
+		})
+	}
+}
+
+func TestExpandedSourceBindingRefusals(t *testing.T) {
+	c, p := fixture(t)
+	c.SourceBinding = map[string]string{}
+	for i := range 32 {
+		id := fmt.Sprintf("canon-node:source%d", i)
+		c.SourceBinding[id] = Digest([]byte(id))
+	}
+	p.SourceBinding = maps.Clone(c.SourceBinding)
+	a := bind(t, c, &p)
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]string)
+	}{
+		{"missing", func(m map[string]string) { delete(m, "canon-node:source31") }},
+		{"extra", func(m map[string]string) { m["canon-node:extra"] = Digest([]byte("extra")) }},
+		{"digest", func(m map[string]string) { m["canon-node:source31"] = Digest([]byte("changed")) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			altered := p
+			altered.SourceBinding = maps.Clone(p.SourceBinding)
+			tc.mutate(altered.SourceBinding)
+			_, err := a.Validate(t.Context(), c.RequestID, bytesOf(t, altered))
+			code(t, err, "SOURCE_BINDING")
+		})
+	}
+	c.SourceBinding["canon-node:source31"] = "invalid"
+	raw := bytesOf(t, c)
+	_, err := NewAuthority(raw, Digest(raw))
+	code(t, err, "SOURCE_BINDING")
 }

@@ -18,7 +18,7 @@ success. Check the returned Go error as well as the fields.
 |---|---|
 | `SchemaVersion` | `pouch-finite-validation/v1`. |
 | `RequestID` | Caller-selected nonempty identity, at most 200 bytes. |
-| `SourceBinding` | 1–8 source IDs mapped to exact-content SHA-256 strings; lowercase hexadecimal, 64 characters. IDs are nonempty and at most 200 bytes. |
+| `SourceBinding` | 1–32 source IDs mapped to exact-content SHA-256 strings; lowercase hexadecimal, 64 characters. IDs are nonempty and at most 200 bytes. |
 | `Assumptions` | Explicit string-to-string declarations. An empty object is permitted; null or missing is not. Assumptions are not observed facts. |
 | `Model.Fields` | 1–16 categorical fields, each with 1–64 distinct nonempty string values. Field names and values are at most 200 bytes. The product of domain sizes is at most 4,096. Boolean or numeric JSON values are not coerced into strings. |
 | `Model.Forbidden` | At most 256 nonempty partial state patterns. A complete state matching every entry of any one pattern is excluded. |

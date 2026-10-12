@@ -15,6 +15,7 @@ import (
 const Version = "pouch-finite-validation/v1"
 const MaxBytes = 4 << 20
 const maxStates = 4096
+const maxSourceBindings = 32
 
 // State is a complete assignment of named categorical coordinates.
 type State map[string]string
@@ -117,7 +118,7 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 	if err := decode(raw, &c); err != nil {
 		return nil, err
 	}
-	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 || len(c.SourceBinding) > 8 {
+	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 || len(c.SourceBinding) > maxSourceBindings {
 		return nil, reject("AUTHORITY_CONTRACT")
 	}
 	for id, hash := range c.SourceBinding {

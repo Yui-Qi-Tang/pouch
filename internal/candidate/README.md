@@ -21,7 +21,7 @@ file is pinned by an externally supplied lowercase SHA-256, before decoding.
 |---|---|
 | `schema_version` | Exactly `pouch-candidate-space/v1`. |
 | `request_id` | Caller-selected problem identity. |
-| `source_binding` | 1–8 evidence IDs mapped to exact source digests; follows the existing authority convention. |
+| `source_binding` | 1–32 evidence IDs mapped to exact source digests; follows the existing authority convention. |
 | `assumptions` | Explicit modeling assumptions. `candidate_space_sha256` is reserved for the compiler. |
 | `groups` | Ordered choice groups. Each has `id` and `options`; each option has `id` and `text` mapping target file paths to literal text. |
 | `constraints` | Forbidden partial assignments: `id`, `when` (group → option ID), `evidence` (nonempty source-ID list). IDs are provenance, not entailment proofs. An empty list permits all combinations. |
