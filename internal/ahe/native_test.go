@@ -328,7 +328,7 @@ func TestNativePublication(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				p, err := Prepare(t.Context(), q, a, validation.Digest(a), contract.RequestID, raw)
+				p, err := Prepare(t.Context(), q, a, validation.Digest(a), contract.RequestID, raw, fixtureBasis(t, a))
 				if err != nil {
 					t.Fatal(err)
 				}

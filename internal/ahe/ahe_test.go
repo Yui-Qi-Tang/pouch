@@ -53,8 +53,8 @@ func TestMCPServerProcess(t *testing.T) {
 			value = map[string]any{"protocolVersion": v, "capabilities": map[string]any{"tools": map[string]any{}}}
 		case "tools/list":
 			var list []any
-			for _, name := range []string{"get_evidence_record", "open_canonical_read_view", "submit_external_source", "submit_extractor_output", "get_endpoint_review", "admit_reviewed_endpoint"} {
-				list = append(list, map[string]any{"name": name, "inputSchema": json.RawMessage(stubSchema), "annotations": map[string]any{"readOnlyHint": name == "get_evidence_record" || name == "open_canonical_read_view" || name == "get_endpoint_review"}})
+			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan", "open_canonical_read_view", "submit_external_source", "submit_extractor_output", "get_endpoint_review", "admit_reviewed_endpoint"} {
+				list = append(list, map[string]any{"name": name, "inputSchema": json.RawMessage(stubSchema), "annotations": map[string]any{"readOnlyHint": name == "get_evidence_use_state" || name == "check_current_evidence_plan" || name == "get_evidence_record" || name == "open_canonical_read_view" || name == "get_endpoint_review"}})
 			}
 			value = map[string]any{"tools": list}
 		case "tools/call":
@@ -65,6 +65,20 @@ func TestMCPServerProcess(t *testing.T) {
 			}
 			var data map[string]any
 			switch req.Params.Name {
+			case "get_evidence_use_state", "check_current_evidence_plan":
+				var in struct {
+					Policy  string        `json:"policy"`
+					IDs     []string      `json:"canonical_ids"`
+					Actions []ActionBasis `json:"actions"`
+				}
+				json.Unmarshal(req.Params.Arguments, &in)
+				gm := mode
+				if path := os.Getenv("POUCH_MCP_TEST_GOVERNANCE_FILE"); path != "" {
+					if raw, err := os.ReadFile(path); err == nil {
+						gm = string(raw)
+					}
+				}
+				data = governanceStub(in.Policy, in.IDs, in.Actions, gm)
 			case "get_evidence_record":
 				var in struct {
 					ID string `json:"canonical_id"`
@@ -105,6 +119,10 @@ func TestMCPServerProcess(t *testing.T) {
 				data = map[string]any{"proposal_occurrence_id": "occ:test", "proposal_count": 1, "status": "pending"}
 			case "get_endpoint_review":
 				json.Unmarshal(req.Params.Arguments, &reviewed)
+				if !validPolicy(reviewed.Derivation.UsePolicy) {
+					_ = enc.Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": map[string]any{"isError": true, "structuredContent": map[string]string{"error": "new derived review requires use_policy"}}})
+					continue
+				}
 				// Separate query/intake/reviewer profiles can use separate processes. The
 				// exact statement is passed through an operator fixture for this test only.
 				if statement == "" {
@@ -188,7 +206,7 @@ func TestDiscoveryPinningAndProfileIsolation(t *testing.T) {
 	if len(raw) != 0 {
 		t.Fatal("discovery or denied binding called a tool")
 	}
-	p := testProfile(t, c, ProfileQuery, "get_evidence_record")
+	p := testProfile(t, c, ProfileQuery, "get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan")
 	if _, err := p.call(t.Context(), "admit_reviewed_endpoint", map[string]any{}); !errors.Is(err, ErrCapabilityUnavailable) {
 		t.Fatal(err)
 	}
@@ -216,9 +234,9 @@ func TestReadSnapshotScopeAndTruncation(t *testing.T) {
 }
 func TestPrepareRejectsSourceBinding(t *testing.T) {
 	c, calls := testClient(t, "wrong-source")
-	q := testProfile(t, c, ProfileQuery, "get_evidence_record")
+	q := testProfile(t, c, ProfileQuery, "get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan")
 	a, p := testAuthority(t)
-	if _, err := Prepare(t.Context(), q, a, validation.Digest(a), "test", p); err == nil {
+	if _, err := Prepare(t.Context(), q, a, validation.Digest(a), "test", p, fixtureBasis(t, a)); err == nil {
 		t.Fatal("wrong source accepted")
 	}
 	raw, _ := os.ReadFile(calls)
@@ -230,11 +248,11 @@ func TestPublicationAndFaults(t *testing.T) {
 	for _, mode := range []string{"", "wrong-statement", "wrong-readback", "lost-write", "slow-write", "rpc-write-error"} {
 		t.Run(mode, func(t *testing.T) {
 			c, calls := testClient(t, mode)
-			q := testProfile(t, c, ProfileQuery, "get_evidence_record")
+			q := testProfile(t, c, ProfileQuery, "get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan")
 			i := testProfile(t, c, ProfileIntake, "submit_external_source", "submit_extractor_output")
 			e := testProfile(t, c, ProfileEndpointReviewer, "get_endpoint_review", "admit_reviewed_endpoint")
 			a, pkg := testAuthority(t)
-			p, err := Prepare(t.Context(), q, a, validation.Digest(a), "test", pkg)
+			p, err := Prepare(t.Context(), q, a, validation.Digest(a), "test", pkg, fixtureBasis(t, a))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Yui-Qi-Tang/pouch/internal/ahe"
 	"github.com/Yui-Qi-Tang/pouch/internal/planning"
 	"github.com/Yui-Qi-Tang/pouch/internal/presentation"
 	"github.com/Yui-Qi-Tang/pouch/internal/projection"
@@ -26,7 +27,7 @@ import (
 // The package-local README.md defines output shapes and status/exit meanings.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: pouch candidate-prepare|candidate-materialize|solve|project|verify|render|ahe-discover|ahe-read|ahe-stage|ahe-admit|version")
+		fmt.Fprintln(stderr, "usage: pouch candidate-prepare|candidate-materialize|solve|project|verify|render|ahe-discover|ahe-read|ahe-check-sources|ahe-stage|ahe-admit|version")
 		return 2
 	}
 	var err error
@@ -34,7 +35,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	case "version":
 		fmt.Fprintln(stdout, "pouch 0.1.0-dev")
 		return 0
-	case "ahe-discover", "ahe-read", "ahe-stage", "ahe-admit":
+	case "ahe-discover", "ahe-read", "ahe-check-sources", "ahe-stage", "ahe-admit":
 		err = aheCommand(ctx, args[0], args[1:], stdout, stderr)
 	case "candidate-prepare", "candidate-materialize", "candidate-bind-runtime":
 		err = candidateCommand(ctx, args[0], args[1:], stdout, stderr)
@@ -80,6 +81,9 @@ func output(w io.Writer, v any) error {
 
 func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	f := flags("solve", errout)
+	aheConfig := f.String("ahe-config", "", "optional governed AHE query profile")
+	basisFile := f.String("action-basis", "", "caller-owned AHE action-basis manifest")
+	basisHash := f.String("action-basis-sha256", "", "caller-pinned manifest digest")
 	authority := f.String("authority", "", "caller-owned authority JSON")
 	hash := f.String("authority-sha256", "", "caller-pinned exact authority digest")
 	request := f.String("request-id", "", "caller-selected request ID")
@@ -102,10 +106,40 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, "required inputs or limits missing")
 		return 2
 	}
+	governed := *aheConfig != "" || *basisFile != "" || *basisHash != ""
+	if governed && (*aheConfig == "" || *basisFile == "" || *basisHash == "") {
+		fmt.Fprintln(errout, "ahe-config, action-basis and action-basis-sha256 required together")
+		return 2
+	}
+	ctx, cancel := context.WithTimeout(ctx, *timeout)
+	defer cancel()
 	in, e := run.ReadInputs(*authority, *hash, *request, *sources)
 	if e != nil {
 		fmt.Fprintln(errout, e)
 		return 2
+	}
+	var basis *ahe.Basis
+	var query *ahe.Profile
+	var governance governanceReport
+	if governed {
+		basis, e = readBasis(in.AuthorityRaw, *hash, *request, *basisFile, *basisHash)
+		if e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		var cfg connectionConfig
+		if e = configJSON(*aheConfig, &cfg); e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		var client *ahe.Client
+		client, query, e = connect(ctx, cfg.Query, ahe.ProfileQuery)
+		if e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		defer client.Close()
+		governance = governanceReport{SchemaVersion: "pouch-ahe-governance/v1", AuthoritySHA256: *hash, RequestID: *request, BasisSHA256: basis.SHA256()}
 	}
 	var graphRaw []byte
 	if (*graph == "") != (*graphHash == "") {
@@ -128,6 +162,21 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
+	if governed {
+		if e = saveGovernanceFile(*dir, "action-basis.json", basis.Raw()); e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		governance.Before, e = basis.Preflight(ctx, query)
+		if e != nil {
+			if saveErr := saveGovernanceReport(*dir, governance); saveErr != nil {
+				fmt.Fprintln(errout, saveErr)
+				return 2
+			}
+			fmt.Fprintln(errout, governanceFailure(out, governance.Before, e))
+			return 2
+		}
+	}
 	evidence := run.Bundle{RequestID: *request}
 	if e = run.AttachEvidence(&evidence, in, graphRaw, *graphHash, *dir); e != nil {
 		fmt.Fprintln(errout, e)
@@ -138,12 +187,27 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
-	ctx, cancel := context.WithTimeout(ctx, *timeout)
-	defer cancel()
 	result, searchErr := planning.Search(ctx, in.Authority.Contract(), runner, planning.Options{MaxPaths: *maxPaths, MaxQueries: *maxQueries})
 	bundle, certErr := run.Certify(ctx, in, result, *dir)
 	bundle.EvidenceMatrix = evidence.EvidenceMatrix
 	bundle.EvidenceScope = evidence.EvidenceScope
+	var governanceErr error
+	if governed {
+		check, err := basis.CheckActions(ctx, query, emittedActions(result))
+		governance.After, governanceErr = &check, err
+		if e = governance.bindResult(bundle); e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		if e = saveGovernanceReport(*dir, governance); e != nil {
+			fmt.Fprintln(errout, e)
+			return 2
+		}
+		bundle.EvidenceScope += "; AHE " + check.Status + " (historical policy check; see ahe-governance.json; no execution permission)"
+		if err != nil {
+			bundle.Diagnostics = append(bundle.Diagnostics, check.Status)
+		}
+	}
 	if e = run.SaveBundle(*dir, bundle); e != nil {
 		fmt.Fprintln(errout, e)
 		return 2
@@ -168,14 +232,27 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		return 2
 	}
 	summary := struct {
-		Status   string `json:"status"`
-		Complete bool   `json:"complete"`
-		Paths    int    `json:"paths"`
-		Queries  int    `json:"queries"`
-		Bundle   string `json:"bundle"`
-	}{bundle.Status, bundle.Complete, len(bundle.Paths), len(result.Queries), "bundle.json"}
+		Status           string `json:"status"`
+		ModelStatus      string `json:"model_status,omitempty"`
+		GovernanceStatus string `json:"governance_status,omitempty"`
+		Complete         bool   `json:"complete"`
+		Paths            int    `json:"paths"`
+		Queries          int    `json:"queries"`
+		Bundle           string `json:"bundle"`
+	}{Status: bundle.Status, Complete: bundle.Complete, Paths: len(bundle.Paths), Queries: len(result.Queries), Bundle: "bundle.json"}
+	if governed {
+		summary.ModelStatus, summary.GovernanceStatus = bundle.Status, governance.After.Status
+		if governanceErr != nil {
+			summary.Status = governance.After.Status
+			summary.Complete = false
+		}
+	}
 	if e = output(out, summary); e != nil {
 		fmt.Fprintln(errout, e)
+		return 2
+	}
+	if governanceErr != nil {
+		fmt.Fprintln(errout, governanceErr)
 		return 2
 	}
 	if certErr != nil {

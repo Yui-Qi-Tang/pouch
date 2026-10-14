@@ -60,6 +60,12 @@ Output directories must be new and files are not overwritten. Hash identity does
 
 `pouch ahe-read --config profiles.json --request bounded-read.json` performs a bounded Query read. `profiles.json` contains `query`, `intake`, and `endpoints` objects, each with a `command` and a `pins` map of allowed tool name to exact input-schema SHA-256. A read only needs `query`. Credentials stay in private launcher files; these local configurations are not copied into bundles. The returned snapshot includes original artifact/response bytes and hashes, plus `projection_bytes_base64`, `projection_sha256` and `normalization`. Feed the exact projection bytes/hash to `solve --graph`, preserving native originals separately. See [adapter hash semantics](ahe-adapter.md#read-and-hash-semantics).
 
+Governed AHE runs additionally retain `action-basis.json` (exact caller-pinned
+bytes) and `ahe-governance.json` (policy checks, exact native responses encoded
+as base64, response digests and result bindings). These are separate from the
+model authority/package and do not change SAT semantics. See the
+[governed planning contract](ahe-adapter.md#governed-planning-and-the-callers-action-basis-manifest).
+
 `pouch ahe-stage` additionally requires `--authority`, `--authority-sha256`, `--request-id`, `--package`, `--intake-request-id`, and an explicit `--observed-at` RFC3339 timestamp. It validates the package and freshly queries source bindings before creating a pending proposal. It returns the exact native review for external inspection with `AWAITING_EXTERNAL_APPROVAL`.
 
 `pouch ahe-admit` uses the same authority/package flags, `--proposal-id`, and `--approval approval.json`. Approval supplies `request_id`, `subject`, `display_sha256`, `package_sha256` and `reason`, all tied to the inspected review. The command freshly validates and reviews again; changed bindings are rejected. This is an explicit write command, never part of `solve` or `render`.

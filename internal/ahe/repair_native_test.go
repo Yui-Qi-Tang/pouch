@@ -139,7 +139,7 @@ func admitRepairBinding(t *testing.T, cfg nativeConfig, intake, endpoints, query
 	}
 	slices.Sort(ids)
 	pending := submitRepairStatement(t, cfg, intake, key, statement)
-	req := ReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: pending.ID, Derivation: Derivation{ParentNodeIDs: ids, Method: "Bind the independently validated model result to the pinned, previously recorded three-file replay. All parents are required. Hash/event consistency was checked by Pouch's fixed-example integration harness. No new execution, official test, global currentness or general physical rollback certification.", Producer: "pouch-recorded-repair-binding/v1", TraceRef: "sha256:" + validation.Digest([]byte(statement))}}
+	req := ReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: pending.ID, Derivation: Derivation{UsePolicy: CurrentActionPolicy, ParentNodeIDs: ids, Method: "Bind the independently validated model result to the pinned, previously recorded three-file replay. All parents are required. Hash/event consistency was checked by Pouch's fixed-example integration harness. No new execution, official test, global currentness or general physical rollback certification.", Producer: "pouch-recorded-repair-binding/v1", TraceRef: "sha256:" + validation.Digest([]byte(statement))}}
 	review := repairCall(t, cfg, endpoints, "get_endpoint_review", req)
 	var r struct {
 		Subject   string `json:"subject"`
@@ -260,7 +260,7 @@ func TestNativeRepairPublication(t *testing.T) {
 		}
 		rebound := repairJSON(t, pkg)
 		nativeWrite(t, filepath.Join(dest, id+"-package.json"), pkg)
-		prepared, err := Prepare(t.Context(), q, authorityRaw, authorityHash, fresh.RequestID, rebound)
+		prepared, err := Prepare(t.Context(), q, authorityRaw, authorityHash, fresh.RequestID, rebound, fixtureBasis(t, authorityRaw))
 		if err != nil {
 			t.Fatal(err)
 		}
