@@ -40,6 +40,11 @@ The current model supports finite categorical states, AND guards, constant effec
 
 Pouch works with local files and has no required evidence service, database or LLM. An optional [AHE adapter](docs/ahe-adapter.md) reads evidence and submits explicitly approved results for storage through public MCP tools.
 
+For AHE-backed current use, the adapter supports schema 59 governance checks
+before planning, after forward/recovery search and before write-back. Supply a
+caller-pinned action-basis manifest; governance rejection remains separate from
+SAT/UNSAT. See the [governed planning workflow](docs/ahe-adapter.md#governed-planning-and-the-callers-action-basis-manifest).
+
 ## Measured results
 
 Two evaluations tested different parts of Pouch's workflow: choosing repair

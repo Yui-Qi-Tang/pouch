@@ -58,6 +58,9 @@ func aheCommand(ctx context.Context, command string, args []string, out, errout 
 	f := flag.NewFlagSet(command, flag.ContinueOnError)
 	f.SetOutput(errout)
 	config := f.String("config", "", "local launch config; never copied into result artifacts")
+	basisFile := f.String("action-basis", "", "caller-owned action-basis manifest")
+	basisHash := f.String("action-basis-sha256", "", "caller-pinned manifest digest")
+	policy := f.String("use-policy", ahe.CurrentActionPolicy, "pre-model source check policy")
 	requestFile := f.String("request", "", "bounded snapshot request JSON")
 	authorityFile := f.String("authority", "", "caller-owned authority JSON")
 	hash := f.String("authority-sha256", "", "caller-pinned digest")
@@ -106,6 +109,19 @@ func aheCommand(ctx context.Context, command string, args []string, out, errout 
 		return e
 	}
 	defer queryClient.Close()
+	if command == "ahe-check-sources" {
+		var req struct {
+			CanonicalIDs []string `json:"canonical_ids"`
+		}
+		if err := configJSON(*requestFile, &req); err != nil {
+			return err
+		}
+		check, err := ahe.CheckSources(ctx, query, *policy, req.CanonicalIDs)
+		if err != nil {
+			return governanceFailure(out, check, err)
+		}
+		return output(out, check)
+	}
 	if command == "ahe-read" {
 		var req ahe.ReadRequest
 		if e := configJSON(*requestFile, &req); e != nil {
@@ -125,8 +141,25 @@ func aheCommand(ctx context.Context, command string, args []string, out, errout 
 	if e != nil {
 		return e
 	}
-	prepared, e := ahe.Prepare(ctx, query, raw, *hash, *requestID, pkg)
+	basis, e := readBasis(raw, *hash, *requestID, *basisFile, *basisHash)
 	if e != nil {
+		return e
+	}
+	// Only the pre-model command has a policy default. Publication uses pinned bytes.
+	policySet := false
+	f.Visit(func(flag *flag.Flag) {
+		if flag.Name == "use-policy" {
+			policySet = true
+		}
+	})
+	if policySet && *policy != basis.Policy() {
+		return errors.New("use-policy differs from pinned manifest")
+	}
+	prepared, e := ahe.Prepare(ctx, query, raw, *hash, *requestID, pkg, basis)
+	if e != nil {
+		if prepared != nil {
+			return governanceFailure(out, prepared.Governance(), e)
+		}
 		return e
 	}
 	endClient, endpoints, e := connect(ctx, cfg.Endpoints, ahe.ProfileEndpointReviewer)
@@ -146,6 +179,9 @@ func aheCommand(ctx context.Context, command string, args []string, out, errout 
 		defer intakeClient.Close()
 		pending, e := prepared.Submit(ctx, intake, *intakeID, at)
 		if e != nil {
+			if errors.Is(e, ahe.ErrGovernanceRejected) || errors.Is(e, ahe.ErrGovernanceUnavailable) {
+				return governanceFailure(out, prepared.Governance(), e)
+			}
 			if oe := output(out, struct {
 				Status  string      `json:"status"`
 				Pending ahe.Pending `json:"pending"`
@@ -199,6 +235,12 @@ func publicationStatus(p ahe.Publication, err error) string {
 	}
 	if errors.Is(err, ahe.ErrDeliveryUnknown) {
 		return "DELIVERY_UNKNOWN"
+	}
+	if errors.Is(err, ahe.ErrGovernanceRejected) {
+		return "GOVERNANCE_REJECTED"
+	}
+	if errors.Is(err, ahe.ErrGovernanceUnavailable) {
+		return "GOVERNANCE_UNAVAILABLE"
 	}
 	if len(p.Admission) != 0 {
 		return "ADMISSION_RECEIVED_READBACK_INCOMPLETE"

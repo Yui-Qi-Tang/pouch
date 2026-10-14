@@ -1,4 +1,4 @@
-# Project status — 2026-10-04
+# Project status — 2026-10-14
 
 Version: `0.1.0-dev`, unreleased. The candidate-workflow migration was based on
 `480aec39fbce2cca1ca4abbe3780f4fae3c00eca` for integration into `develop`.
@@ -8,6 +8,16 @@ see the [experimental evaluation](EVALUATION.md). That page separates repair
 combination search from known-repair regression.
 
 ## Current capabilities and verification
+
+The AHE adapter now sends explicit derived-endpoint `use_policy` for the schema
+59 / role policy v10 public contract. A separate caller-pinned action-basis
+manifest supports source preflight, final forward/recovery action checks and
+fresh checks before pending submission/admission. Governance rejection and
+unavailable checks stay separate from model search results. Schema re-pinning
+remains an explicit operator step. Self-contained protocol/CLI regressions
+exercise these boundaries; native schema-59 database integration has not been
+rerun for this change. The native acceptance numbers below describe earlier
+frozen runs, not acceptance of the new governance workflow.
 
 The existing graph/matrix projection, bounded SAT path search, original-rule
 replay, separate model recovery, JSON/HTML reports and optional public AHE MCP
@@ -60,7 +70,7 @@ were stopped/removed.
 | Finite candidate compilation | `candidate-prepare` | Caller supplies options, constraints and source references |
 | Patch materialization | `candidate-materialize` | Checked package and baseline bytes; no patch application |
 | Runtime-record binding | `candidate-bind-runtime` | Exact supplied artifacts and observation consistency; no test execution |
-| Native evidence read and model-result storage | `ahe-read`, `ahe-stage`, `ahe-admit` | Public MCP plus explicit external approval; runtime bindings need a separate publication workflow |
+| Native evidence read, current-use checks and model-result storage | `ahe-read`, `ahe-check-sources`, governed `solve`, `ahe-stage`, `ahe-admit` | Declared action bases, public MCP and explicit external approval; runtime bindings need a separate publication workflow |
 | Human and AI reports | `solve`, `render` | Saved model replay in HTML and JSON; no implicit execution report |
 
 ## Boundaries and remaining work

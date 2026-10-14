@@ -20,9 +20,13 @@ type Prepared struct {
 	receipt validation.Receipt
 	sources []Record
 	parents []string
+	basis   *Basis
+	query   *Profile
+	actions []string
+	check   GovernanceCheck
 }
 
-func Prepare(ctx context.Context, query *Profile, authorityRaw []byte, expectedHash, requestID string, packageRaw []byte) (*Prepared, error) {
+func Prepare(ctx context.Context, query *Profile, authorityRaw []byte, expectedHash, requestID string, packageRaw []byte, basis *Basis) (*Prepared, error) {
 	a, err := validation.NewAuthority(authorityRaw, expectedHash)
 	if err != nil {
 		return nil, err
@@ -31,7 +35,18 @@ func Prepare(ctx context.Context, query *Profile, authorityRaw []byte, expectedH
 	if err != nil {
 		return nil, err
 	}
-	p := &Prepared{receipt: receipt, parents: a.SourceIDs()}
+	if basis == nil || basis.manifest.AuthoritySHA256 != expectedHash || basis.manifest.RequestID != requestID {
+		return nil, errors.New("matching pinned action-basis manifest required")
+	}
+	var pkg validation.Package
+	if err := json.Unmarshal(packageRaw, &pkg); err != nil {
+		return nil, err
+	}
+	actions := slices.Clone(pkg.Forward.Actions)
+	if pkg.Return != nil {
+		actions = append(actions, pkg.Return.Actions...)
+	}
+	p := &Prepared{receipt: receipt, parents: a.SourceIDs(), basis: basis, query: query, actions: actions}
 	for _, id := range p.parents {
 		record, err := ReadRecord(ctx, query, id)
 		if err != nil {
@@ -43,10 +58,13 @@ func Prepare(ctx context.Context, query *Profile, authorityRaw []byte, expectedH
 		}
 		p.sources = append(p.sources, record)
 	}
+	if err := p.recheck(ctx, query); err != nil {
+		return p, err
+	}
 	return p, nil
 }
 func (p *Prepared) ready() bool {
-	return p != nil && p.receipt.SchemaVersion == validation.Version && p.receipt.PackageSHA256 != "" && len(p.parents) > 0 && len(p.parents) == len(p.sources)
+	return p != nil && p.basis != nil && p.query != nil && p.receipt.SchemaVersion == validation.Version && p.receipt.PackageSHA256 != "" && len(p.parents) > 0 && len(p.parents) == len(p.sources)
 }
 
 func (p *Prepared) Receipt() validation.Receipt { return p.receipt }
@@ -60,6 +78,7 @@ func (p *Prepared) Sources() []Record {
 }
 
 type Derivation struct {
+	UsePolicy     string   `json:"use_policy"`
 	ParentNodeIDs []string `json:"parent_node_ids"`
 	Method        string   `json:"method"`
 	Producer      string   `json:"producer"`
@@ -77,6 +96,7 @@ type Review struct {
 	Subject       string          `json:"subject"`
 	DisplaySHA256 string          `json:"display_sha256"`
 	PackageSHA256 string          `json:"package_sha256"`
+	Governance    GovernanceCheck `json:"governance"`
 	Raw           json.RawMessage `json:"raw"`
 	request       ReviewRequest
 	display       json.RawMessage
@@ -94,7 +114,7 @@ func (p *Prepared) Review(ctx context.Context, endpoints *Profile, proposalID st
 	if !strings.HasPrefix(proposalID, "occ:") || len(proposalID) > 200 {
 		return r, errors.New("exact pending proposal ID required")
 	}
-	req := ReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: proposalID, Derivation: Derivation{ParentNodeIDs: slices.Clone(p.parents), Method: "Pouch finite-model validation. This result is a model_conditional_conclusion, not an observed fact; every listed source is an AND basis. Source entailment and physical restore are not certified.", Producer: "pouch-finite-validation/v1", TraceRef: "sha256:" + p.receipt.PackageSHA256}}
+	req := ReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: proposalID, Derivation: Derivation{UsePolicy: p.basis.Policy(), ParentNodeIDs: slices.Clone(p.parents), Method: "Pouch finite-model validation. This result is a model_conditional_conclusion, not an observed fact; every listed source is an AND basis. Source entailment and physical restore are not certified. Caller action-basis manifest sha256:" + p.basis.SHA256(), Producer: "pouch-finite-validation/v1", TraceRef: "sha256:" + p.receipt.PackageSHA256}}
 	raw, err := endpoints.call(ctx, "get_endpoint_review", req)
 	if err != nil {
 		return r, err
@@ -121,7 +141,7 @@ func (p *Prepared) Review(ctx context.Context, endpoints *Profile, proposalID st
 	if json.Unmarshal(out.Display, &display) != nil || display.ContractVersion != "endpoint-review/v1" || !reflect.DeepEqual(display.Request, req) || display.Proposal.ProposalOccurrenceID != proposalID || display.Proposal.StatementText != p.Statement() || display.Proposal.AdmissionOutcome != "pending" {
 		return r, errors.New("endpoint review does not bind the exact validated result")
 	}
-	return Review{Subject: out.Subject, DisplaySHA256: validation.Digest(out.Display), PackageSHA256: p.receipt.PackageSHA256, Raw: bytes.Clone(raw), request: req, display: bytes.Clone(out.Display), prepared: p}, nil
+	return Review{Subject: out.Subject, DisplaySHA256: validation.Digest(out.Display), PackageSHA256: p.receipt.PackageSHA256, Raw: bytes.Clone(raw), Governance: p.Governance(), request: req, display: bytes.Clone(out.Display), prepared: p}, nil
 }
 
 // Approval must come from the caller after showing the complete unchanged display.
@@ -134,6 +154,7 @@ type Approval struct {
 	Reason        string `json:"reason"`
 }
 type Publication struct {
+	Governance  GovernanceCheck    `json:"governance"`
 	Validation  validation.Receipt `json:"validation"`
 	Admission   json.RawMessage    `json:"admission"`
 	Readback    json.RawMessage    `json:"readback"`
@@ -169,16 +190,12 @@ func (p *Prepared) Admit(ctx context.Context, endpoints, query *Profile, r Revie
 	if r.prepared != p || json.Unmarshal(r.Raw, &native) != nil || native.Subject != r.Subject || !bytes.Equal(native.Display, r.display) || r.DisplaySHA256 != validation.Digest(r.display) || r.PackageSHA256 != p.receipt.PackageSHA256 || approval.Subject != r.Subject || approval.DisplaySHA256 != r.DisplaySHA256 || approval.PackageSHA256 != r.PackageSHA256 || strings.TrimSpace(approval.Reason) == "" || len(approval.Reason) > 2000 || strings.TrimSpace(approval.RequestID) == "" || len(approval.RequestID) > 200 {
 		return publication, errors.New("approval does not bind the complete unchanged review and package")
 	}
-	// Recheck source identities just before submission. No claim of a global currentness cut.
-	for _, source := range p.sources {
-		now, err := ReadRecord(ctx, query, source.CanonicalID)
-		if err != nil {
-			return publication, err
-		}
-		if now.StatementSHA256 != source.StatementSHA256 {
-			return publication, errors.New("source binding changed before admission")
-		}
+	// The native endpoint repeats its own policy check in the committing transaction.
+	if err := p.recheck(ctx, query); err != nil {
+		publication.Governance = p.Governance()
+		return publication, err
 	}
+	publication.Governance = p.Governance()
 	raw, err := endpoints.call(ctx, "admit_reviewed_endpoint", map[string]any{"request_id": approval.RequestID, "review": r.request, "expected_subject": r.Subject, "decision": "approved", "decision_reason": approval.Reason})
 	if err != nil {
 		return publication, err
@@ -226,6 +243,9 @@ func (p *Prepared) Submit(ctx context.Context, intake *Profile, requestID string
 	if requestID == "" || len(requestID) > 180 || observedAt.IsZero() {
 		return pending, errors.New("bounded intake request ID and explicit observation time required")
 	}
+	if err := p.recheck(ctx, p.query); err != nil {
+		return pending, err
+	}
 	statement := p.Statement()
 	raw, err := intake.call(ctx, "submit_external_source", map[string]any{"schema_version": "external-source-envelope-v1", "request_id": requestID + "/source", "source_system": "pouch", "source_namespace": "validated-model-conclusions", "object_type": "model_conditional_conclusion", "object_id": p.receipt.PackageSHA256, "revision": p.receipt.AuthoritySHA256, "source_location": "urn:pouch:sha256:" + p.receipt.PackageSHA256, "title": "Pouch conditional model conclusion", "content_format": "text/plain", "content_fidelity": "verbatim", "content": statement, "coverage": "full_document", "limitations": []string{}, "collector_id": "pouch", "connector_id": "pouch-public-mcp/v1", "observed_at": observedAt.UTC().Format(time.RFC3339Nano)})
 	if err != nil {
@@ -258,4 +278,21 @@ func (p *Prepared) Submit(ctx context.Context, intake *Profile, requestID string
 	}
 	pending.ProposalID = proposal.ID
 	return pending, nil
+}
+
+// Governance returns a detached historical check, not permission for another write.
+func (p *Prepared) Governance() GovernanceCheck {
+	c := p.check
+	c.Raw = bytes.Clone(c.Raw)
+	c.Assessment = bytes.Clone(c.Assessment)
+	return c
+}
+func (p *Prepared) recheck(ctx context.Context, query *Profile) error {
+	var err error
+	p.check, err = p.basis.Preflight(ctx, query)
+	if err == nil {
+		p.check, err = p.basis.CheckActions(ctx, query, p.actions)
+	}
+	p.check.PackageSHA256 = p.receipt.PackageSHA256
+	return err
 }

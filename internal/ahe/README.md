@@ -26,7 +26,7 @@ this snapshot into an operation model. See [CLI outputs](../cli/README.md).
 
 | Constant | Value | Tool allowlist |
 |---|---|---|
-| `ProfileQuery` | `query` | `open_canonical_read_view`, `get_evidence_record` |
+| `ProfileQuery` | `query` | `open_canonical_read_view`, `get_evidence_record`, `get_evidence_use_state`, `check_current_evidence_plan` |
 | `ProfileIntake` | `intake` | `submit_external_source`, `submit_extractor_output` |
 | `ProfileEndpointReviewer` | `endpoint-reviewer` | `get_endpoint_review`, `admit_reviewed_endpoint` |
 | `ProfileSourceClaimReviewer` | `source-claim-reviewer` | `get_source_claim_review`, `admit_reviewed_source_claim` |
@@ -82,8 +82,14 @@ source binding; the caller must use the same hash scope.
 | Type / field | Meaning / values |
 |---|---|
 | `Prepared` | Private validated model receipt, freshly read source records and sorted parent IDs. Created by `Prepare`; conveys no admission approval. |
+| `BasisManifest` / `NewBasis` | Caller-pinned `pouch-ahe-basis/v1`, bound to authority bytes, request, explicit policy and every model action's nonempty basis. No inferred mapping. |
+| `CheckSources` / `Basis.Preflight` | Fresh native source-use check before modeling / search; Preflight also compares every source statement digest. |
+| `Basis.CheckActions` | Fresh native check of all distinct emitted forward/recovery action IDs, with exact mapping echo. Zero actions cause a fresh basis-only check. |
+| `GovernanceCheck` | Status, selected policy, manifest/package bindings, original response bytes as base64 and digest, plus assessment for display. Historical read, not a reusable permit. |
+| `Prepared.Governance()` | Detached latest check; a returned Prepared plus error is diagnostic, not success. Submit/Admit always check again. |
 | `Prepared.Receipt()` / `Statement()` / `Sources()` | Local validation receipt, its exact JSON statement, and copied native source records. |
 | `Derivation.ParentNodeIDs` | Exact sorted AND basis of selected sources; not alternative parents. |
+| `Derivation.UsePolicy` | Explicit `current-action/v1` or `grounded-current-action/v1`, bound into native review. |
 | `Derivation.Method` | Fixed explanation of conditional finite-model validation and its limits. |
 | `Derivation.Producer` / `TraceRef` | `pouch-finite-validation/v1` and `sha256:<package digest>`. |
 | `ReviewRequest.Kind` | `derived_spec` for this adapter flow. |

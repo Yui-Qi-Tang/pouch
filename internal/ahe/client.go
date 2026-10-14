@@ -198,7 +198,7 @@ const (
 )
 
 var allowed = map[ProfileKind]map[string]bool{
-	ProfileQuery:               {"open_canonical_read_view": false, "get_evidence_record": false},
+	ProfileQuery:               {"open_canonical_read_view": false, "get_evidence_record": false, "get_evidence_use_state": false, "check_current_evidence_plan": false},
 	ProfileIntake:              {"submit_external_source": true, "submit_extractor_output": true},
 	ProfileEndpointReviewer:    {"get_endpoint_review": false, "admit_reviewed_endpoint": true},
 	ProfileSourceClaimReviewer: {"get_source_claim_review": false, "admit_reviewed_source_claim": true},

@@ -29,6 +29,7 @@ conversion between the two commands.
 | `candidate-bind-runtime` | `pouch-runtime-binding/v1` | `RECORDED_CHECKS_PASS` checks pinned observations, not fresh execution. |
 | `ahe-discover` | List of `{name, input_schema_sha256, input_schema}` | Discovered tool schemas, no tool-call permission granted. |
 | `ahe-read` | [ahe.Snapshot](../ahe/README.md) | Direct JSON encoding of the adapter snapshot, including exact-byte base64 fields. |
+| `ahe-check-sources` | `ahe.GovernanceCheck` (failure wraps it as `{status, governance}`) | Fresh pre-model check of `canonical_ids`, defaulting to `current-action/v1`; `--use-policy` can select grounded policy. |
 | `ahe-stage` | `{status, pending, review}` | Pending source/proposal writes and exact native review; not admission. |
 | `ahe-admit` | `{status, publication}` | Admission/readback outcome. Local validation and native receipts remain separate. |
 
@@ -37,6 +38,22 @@ After authority loading, a semantic package refusal from `verify` emits
 Authority-load rejection exits 1 with stderr, without that JSON envelope.
 
 ## AHE wrapper statuses
+
+Optional `solve --ahe-config ... --action-basis ... --action-basis-sha256 ...`
+adds `model_status` and `governance_status` to the summary. Rejection or failure
+of a check sets summary status to `GOVERNANCE_REJECTED` or
+`GOVERNANCE_UNAVAILABLE`, `complete=false`, and exit 2. Model bundle status and
+solver evidence remain separate. `NO_ACTIONS_BASIS_CHECKED` means a fresh
+basis-only check, not native acceptance of an empty plan. Exact manifest and
+response bytes plus result bindings are retained in `action-basis.json` and
+`ahe-governance.json`. Preflight rejection retains that report before creating
+any solver artifacts or model bundle.
+
+`ahe-stage` and `ahe-admit` require the same pinned manifest flags. Policy comes
+from those bytes, with no implicit default. A conflicting `--use-policy` is
+rejected. Source/governance failures before a write report the specific
+governance status; they are not uncertain deliveries or UNSAT. The admission
+publication includes its latest check, bound to the exact package.
 
 | Command / status | Meaning |
 |---|---|
