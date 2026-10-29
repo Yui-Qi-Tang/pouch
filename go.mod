@@ -1,3 +1,3 @@
 module github.com/Yui-Qi-Tang/pouch
 
-go 1.27.1
+go 1.27.3

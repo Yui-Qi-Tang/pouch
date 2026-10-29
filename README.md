@@ -82,7 +82,7 @@ repairs. Pouch can also work without AHE.
 
 ## Build and use
 
-Requires Go **1.27.1**. The Go module uses only the standard library. SAT search additionally requires caller-supplied CaDiCaL and DRAT-trim executables pinned by SHA-256; standalone model validation does not.
+Requires Go **1.27.3**. The Go module uses only the standard library. SAT search additionally requires caller-supplied CaDiCaL and DRAT-trim executables pinned by SHA-256; standalone model validation does not.
 
 ```sh
 go build -o bin/pouch ./cmd/pouch
