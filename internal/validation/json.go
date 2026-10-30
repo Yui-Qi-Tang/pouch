@@ -10,6 +10,9 @@ import (
 	"unicode/utf8"
 )
 
+// Decode applies the strict JSON rules of authority files to other schemas.
+func Decode(raw []byte, dest any) error { return decode(raw, dest) }
+
 // Strict JSON forbids null except the optional return certificate. All object
 // keys are ASCII with exact casing; aliases, duplicates and unknown fields fail.
 func decode(raw []byte, dest any) error {

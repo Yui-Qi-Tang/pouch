@@ -153,6 +153,7 @@ The project includes [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), and the [Po
 - [Theory: representation, search, replay and recovery](docs/THEORY.md)
 - [Experimental results: combinations, repair and recovery](docs/EVALUATION.md)
 - [Candidate options, patch materialization and runtime-record binding](internal/candidate/README.md)
+- [Automaton authorities and lattice gas rule tables](internal/automata/README.md)
 - [Report output and optional test archives](docs/artifacts.md)
 
 ## License

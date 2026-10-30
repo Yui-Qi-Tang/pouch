@@ -27,7 +27,7 @@ import (
 // The package-local README.md defines output shapes and status/exit meanings.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: pouch candidate-prepare|candidate-materialize|solve|project|verify|render|ahe-discover|ahe-read|ahe-check-sources|ahe-stage|ahe-admit|version")
+		fmt.Fprintln(stderr, "usage: pouch automaton-prepare|candidate-prepare|candidate-materialize|solve|project|verify|render|ahe-discover|ahe-read|ahe-check-sources|ahe-stage|ahe-admit|version")
 		return 2
 	}
 	var err error
@@ -39,6 +39,8 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		err = aheCommand(ctx, args[0], args[1:], stdout, stderr)
 	case "candidate-prepare", "candidate-materialize", "candidate-bind-runtime":
 		err = candidateCommand(ctx, args[0], args[1:], stdout, stderr)
+	case "automaton-prepare":
+		err = automatonPrepare(args[1:], stdout, stderr)
 	case "solve":
 		return solve(ctx, args[1:], stdout, stderr)
 	case "project":

@@ -24,6 +24,7 @@ conversion between the two commands.
 | `project` | `projection.Matrix` | Evidence incidence projection; see [projection-format.md](../../docs/projection-format.md). |
 | `verify` | `validation.Receipt` | Successful original-rule model-package validation. No `status` field is added to this receipt. |
 | `render` | `{status: "RENDERED", verification: "saved claims only; no re-verification"}` | HTML was rendered. No renewed proof/receipt validation. |
+| `automaton-prepare` | `pouch-automaton/v1` authority JSON | Rule tables of a caller-declared lattice gas. See [automata](../automata/README.md). |
 | `candidate-prepare` | v1 validation authority JSON | Compiled caller-declared options and constraints. |
 | `candidate-materialize` | `pouch-materialization/v1` | New rendered files/patch; `runtime_status=NOT_RUN`, no execution. |
 | `candidate-bind-runtime` | `pouch-runtime-binding/v1` | `RECORDED_CHECKS_PASS` checks pinned observations, not fresh execution. |
@@ -74,7 +75,7 @@ Do not interpret an absent stdout field as success or automatically retry a writ
 approval, and `render` may merely have displayed saved claims. `1` is used by
 `verify` for authority/model-package rejection and by `solve` for a rejected
 certification result. `2` covers usage, operational errors and incomplete runs.
-Currently `project`, candidate commands and AHE handlers map **all** returned errors to 2, including
+Currently `project`, `automaton-prepare`, candidate commands and AHE handlers map **all** returned errors to 2, including
 semantic refusals. Thus exit codes are command-specific, not a universal
 substitute for the result/status/receipt fields.
 
@@ -91,7 +92,7 @@ defaults to 2 minutes for search/certification, `--query-timeout` to 10 seconds
 per external tool execution. AHE `--timeout` defaults to 1 minute. Duration flags
 use Go duration strings, e.g. `10s`; none of these limits proves no solution.
 
-Implementation: [cli.go](cli.go), [ahe.go](ahe.go), [candidate.go](candidate.go).
+Implementation: [cli.go](cli.go), [ahe.go](ahe.go), [candidate.go](candidate.go), [automaton.go](automaton.go).
 
 ## Candidate commands
 
