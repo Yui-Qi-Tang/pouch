@@ -26,6 +26,7 @@ conversion between the two commands.
 | `render` | `{status: "RENDERED", verification: "saved claims only; no re-verification"}` | HTML was rendered. No renewed proof/receipt validation. |
 | `automaton-prepare` | `pouch-automaton/v1` authority JSON | Rule tables of a caller-declared lattice gas. See [automata](../automata/README.md). |
 | `solve-automaton` | Summary JSON; result directory with `pouch-automaton-bundle/v1` and `index.html` | Searches an automaton authority. Exit codes follow `solve`. |
+| `automaton-verify` | `pouch-automaton-receipt/v1` | Saved claims match a recomputation from the caller's authority. No solver is run. Exit codes follow `verify`. |
 | `candidate-prepare` | v1 validation authority JSON | Compiled caller-declared options and constraints. |
 | `candidate-materialize` | `pouch-materialization/v1` | New rendered files/patch; `runtime_status=NOT_RUN`, no execution. |
 | `candidate-bind-runtime` | `pouch-runtime-binding/v1` | `RECORDED_CHECKS_PASS` checks pinned observations, not fresh execution. |
@@ -74,8 +75,9 @@ Do not interpret an absent stdout field as success or automatically retry a writ
 
 `0` means the command finished its own task; `ahe-stage` may still be awaiting
 approval, and `render` may merely have displayed saved claims. `1` is used by
-`verify` for authority/model-package rejection and by `solve` for a rejected
-certification result. `2` covers usage, operational errors and incomplete runs.
+`verify` and `automaton-verify` for a rejected authority or saved result, and by
+`solve` and `solve-automaton` for a rejected certification result. `2` covers
+usage, operational errors and incomplete runs.
 Currently `project`, `automaton-prepare`, candidate commands and AHE handlers map **all** returned errors to 2, including
 semantic refusals. Thus exit codes are command-specific, not a universal
 substitute for the result/status/receipt fields.
@@ -90,7 +92,7 @@ portable result metadata.
 Search length bounds live in the authority. CLI `--max-paths` (default 1,000)
 and `--max-queries` (10,000) are positive resource budgets. `solve --timeout`
 defaults to 2 minutes for search/certification, `--query-timeout` to 10 seconds
-per external tool execution. AHE `--timeout` defaults to 1 minute. Duration flags
+per query, shared by its solver and checker. AHE `--timeout` defaults to 1 minute. Duration flags
 use Go duration strings, e.g. `10s`; none of these limits proves no solution.
 
 Implementation: [cli.go](cli.go), [ahe.go](ahe.go), [candidate.go](candidate.go), [automaton.go](automaton.go).

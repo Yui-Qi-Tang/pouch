@@ -23,12 +23,13 @@ import (
 )
 
 // Run dispatches commands and writes command-specific stdout, usually JSON.
-// It returns 0 for completion, 1 for solve/verify model rejection, and 2 for
-// incomplete work or errors. Other handlers also map semantic errors to 2.
+// It returns 0 for completion, 1 for model rejection by solve, verify and their
+// automaton forms, and 2 for incomplete work or errors. Other handlers also map
+// semantic errors to 2.
 // The package-local README.md defines output shapes and status/exit meanings.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: pouch automaton-prepare|solve-automaton|candidate-prepare|candidate-materialize|solve|project|verify|render|ahe-discover|ahe-read|ahe-check-sources|ahe-stage|ahe-admit|version")
+		fmt.Fprintln(stderr, "usage: pouch automaton-prepare|solve-automaton|automaton-verify|candidate-prepare|candidate-materialize|candidate-bind-runtime|solve|project|verify|render|ahe-discover|ahe-read|ahe-check-sources|ahe-stage|ahe-admit|version")
 		return 2
 	}
 	var err error
@@ -44,6 +45,8 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		err = automatonPrepare(args[1:], stdout, stderr)
 	case "solve-automaton":
 		return solveAutomaton(ctx, args[1:], stdout, stderr)
+	case "automaton-verify":
+		return verifyAutomaton(ctx, args[1:], stdout, stderr)
 	case "solve":
 		return solve(ctx, args[1:], stdout, stderr)
 	case "project":

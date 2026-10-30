@@ -60,11 +60,17 @@ func Certify(ctx context.Context, a *Authority, digest string, sources run.Sourc
 		}
 		return true
 	}
+	if result.ForwardLimit != a.contract.ForwardLimit || result.ReturnLimit != a.contract.ReturnLimit || result.Deterministic != (a.system.totalChoices == 0) {
+		return refuse(errors.New("search does not match the authority"))
+	}
 	limit := result.Options.MaxOrbitSteps
 	if result.Forward == nil {
 		if !result.ForwardComplete {
 			b.Diagnostics = append(b.Diagnostics, "RUN_NOT_FULLY_VERIFIED")
 			return b, nil
+		}
+		if err := result.checkLedger("forward", result.ForwardLimit, false); err != nil {
+			return refuse(err)
 		}
 		b.Status = "NO_PATH_WITHIN_BOUND"
 		if !result.Deterministic {
@@ -94,6 +100,9 @@ func Certify(ctx context.Context, a *Authority, digest string, sources run.Sourc
 	endpoint := forward.States[len(forward.States)-1]
 	if !slices.Equal(forward.States[0], a.start) || !meets(endpoint) {
 		return refuse(errors.New("forward run misses start or goal"))
+	}
+	if err := result.checkLedger("forward", len(forward.Choices), true); err != nil {
+		return refuse(err)
 	}
 	if result.Deterministic {
 		hit, _, err := a.system.walk(ctx, a.start, meets, len(forward.Choices))
@@ -125,6 +134,9 @@ func Certify(ctx context.Context, a *Authority, digest string, sources run.Sourc
 			return refuse(errors.New("return run misses endpoint or baseline"))
 		}
 		cost := len(back.Choices)
+		if err := result.checkLedger("return", cost, true); err != nil {
+			return refuse(err)
+		}
 		if result.Deterministic {
 			hit, _, err := a.system.walk(ctx, endpoint, reached, cost)
 			if err != nil {
@@ -136,8 +148,14 @@ func Certify(ctx context.Context, a *Authority, digest string, sources run.Sourc
 		}
 		b.RecoveryStatus, b.ReturnSteps = "RETURN_VERIFIED", &cost
 	case !result.Deterministic:
+		if err := result.checkLedger("return", result.ReturnLimit, false); err != nil {
+			return refuse(err)
+		}
 		b.Reason = "CHOICES_NOT_ENUMERATED"
 	default:
+		if err := result.checkLedger("return", result.ReturnLimit, false); err != nil {
+			return refuse(err)
+		}
 		hit, closed, err := a.system.walk(ctx, endpoint, reached, limit)
 		switch {
 		case err != nil:
@@ -157,4 +175,29 @@ func Certify(ctx context.Context, a *Authority, digest string, sources run.Sourc
 		b.Diagnostics = append(b.Diagnostics, "RUN_NOT_FULLY_VERIFIED")
 	}
 	return b, nil
+}
+
+// checkLedger requires the recorded queries of one direction to support a claim:
+// verified UNSAT at every length before last, then a verified answer at last,
+// SAT when found and UNSAT otherwise. A system with choices has no walk, so this
+// is what ties its shortest claims to the solver's checked answers.
+func (r Result) checkLedger(direction string, last int, found bool) error {
+	horizon := 0
+	for _, q := range r.Queries {
+		if q.Direction != direction {
+			continue
+		}
+		want := "UNSAT"
+		if found && horizon == last {
+			want = "SAT"
+		}
+		if q.Horizon != horizon || horizon > last || q.Status != want || !q.Verified {
+			return errors.New("query ledger does not support the claim")
+		}
+		horizon++
+	}
+	if horizon != last+1 {
+		return errors.New("query ledger does not support the claim")
+	}
+	return nil
 }

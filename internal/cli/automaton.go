@@ -154,3 +154,56 @@ func solveAutomaton(ctx context.Context, args []string, out, errout io.Writer) i
 	}
 	return 0
 }
+
+// verifyAutomaton uses the exit codes of verify: 0 when the saved claims hold,
+// 1 for a rejected authority or bundle, and 2 for usage or I/O errors.
+func verifyAutomaton(ctx context.Context, args []string, out, errout io.Writer) int {
+	f := flags("automaton-verify", errout)
+	authority := f.String("authority", "", "caller-owned automaton authority JSON")
+	hash := f.String("authority-sha256", "", "caller-pinned exact authority digest")
+	request := f.String("request-id", "", "caller-selected request ID")
+	file := f.String("bundle", "", "saved automaton bundle JSON")
+	timeout := f.Duration("timeout", 2*time.Minute, "whole verification budget")
+	if e := f.Parse(args); e != nil {
+		return 2
+	}
+	if f.NArg() != 0 || *authority == "" || *hash == "" || *request == "" || *file == "" || *timeout <= 0 {
+		fmt.Fprintln(errout, "required inputs missing")
+		return 2
+	}
+	ctx, cancel := context.WithTimeout(ctx, *timeout)
+	defer cancel()
+	raw, e := read(*authority, validation.MaxBytes)
+	if e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
+	saved, e := read(*file, 64<<20)
+	if e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
+	a, e := automata.NewAuthority(raw, *hash)
+	if e != nil {
+		fmt.Fprintln(errout, e)
+		return rejectionCode(e)
+	}
+	receipt, e := automata.Verify(ctx, a, *hash, *request, saved)
+	if e != nil {
+		fmt.Fprintln(errout, e)
+		return rejectionCode(e)
+	}
+	if e = output(out, receipt); e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
+	return 0
+}
+
+func rejectionCode(err error) int {
+	var rejection *validation.Rejection
+	if errors.As(err, &rejection) {
+		return 1
+	}
+	return 2
+}

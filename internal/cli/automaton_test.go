@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Yui-Qi-Tang/calx/automaton"
 	"github.com/Yui-Qi-Tang/pouch/internal/automata"
+	"github.com/Yui-Qi-Tang/pouch/internal/planning"
 	"github.com/Yui-Qi-Tang/pouch/internal/run"
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
@@ -112,5 +114,54 @@ func TestRenderSelectsTheAutomatonViewer(t *testing.T) {
 	}
 	if !bytes.Contains(page, []byte("Pouch automaton replay")) {
 		t.Fatal("wrong viewer")
+	}
+}
+
+func TestAutomatonVerifyExitCodes(t *testing.T) {
+	dir := t.TempDir()
+	authority, err := json.Marshal(automata.Contract{SchemaVersion: automata.Version, RequestID: "merge", SourceBinding: map[string]string{"synthetic:rule": strings.Repeat("a", 64)}, Assumptions: map[string]string{}, Model: automata.Model{Bits: 1, Rules: []automata.Rule{{Inputs: 2, Table: "0e"}}, Cells: []automata.Cell{{Rule: 0, Inputs: []int{0, 1}}, {Rule: 0, Inputs: []int{0, 1}}}}, Start: "01", Goal: automata.Pattern{Mask: "03", Value: "03"}, Baseline: "01", ForwardLimit: 1, ReturnLimit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := validation.Digest(authority)
+	a, err := automata.NewAuthority(authority, digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queries := []planning.Query{{Direction: "forward", Horizon: 0, Status: "UNSAT", Verified: true}, {Direction: "forward", Horizon: 1, Status: "SAT", Verified: true}, {Direction: "return", Horizon: 0, Status: "UNSAT", Verified: true}, {Direction: "return", Horizon: 1, Status: "UNSAT", Verified: true}}
+	result := automata.Result{Policy: "shortest-run/" + automaton.Profile, Options: automata.Options{MaxOrbitSteps: 10}, ForwardLimit: 1, ReturnLimit: 1, Deterministic: true, Forward: &automata.Trace{States: []string{"01", "03"}, Choices: []string{""}}, Return: &automata.Return{Status: "NO_RETURN_WITHIN_BOUND", QueryIDs: []string{}}, Queries: queries, ForwardComplete: true, Complete: true, Status: "FOUND"}
+	bundle, err := automata.Certify(context.Background(), a, digest, run.SourceManifest{AuthoritySHA256: digest, RequestID: "merge", Sources: []run.Source{}}, result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorityFile, bundleFile, tampered := filepath.Join(dir, "authority.json"), filepath.Join(dir, "bundle.json"), filepath.Join(dir, "tampered.json")
+	for name, content := range map[string][]byte{authorityFile: authority, bundleFile: raw, tampered: bytes.Replace(raw, []byte(`"NO_RETURN_IN_MODEL"`), []byte(`"RETURN_VERIFIED"`), 1)} {
+		if err := os.WriteFile(name, content, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	args := func(file string) []string {
+		return []string{"automaton-verify", "--authority", authorityFile, "--authority-sha256", digest, "--request-id", "merge", "--bundle", file}
+	}
+	var out, errs bytes.Buffer
+	if got := Run(context.Background(), args(bundleFile), &out, &errs); got != 0 {
+		t.Fatalf("exit %d: %s", got, errs.String())
+	}
+	if !strings.Contains(out.String(), automata.ReceiptVersion) {
+		t.Fatal(out.String())
+	}
+	out.Reset()
+	if got := Run(context.Background(), args(tampered), &out, &errs); got != 1 || out.Len() != 0 {
+		t.Fatalf("tampered: exit %d, %d bytes", got, out.Len())
+	}
+	if got := Run(context.Background(), args(filepath.Join(dir, "missing.json")), &out, &errs); got != 2 {
+		t.Fatalf("missing: exit %d", got)
+	}
+	if got := Run(context.Background(), []string{"automaton-verify"}, &out, &errs); got != 2 {
+		t.Fatalf("usage: exit %d", got)
 	}
 }
