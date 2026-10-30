@@ -218,6 +218,8 @@ The future Auto mode objective is: the operating AI reads diagnostics → invest
 
 `internal/validation` retains `pouch-finite-validation/v1`: at most 16 fields, 64 string values per field, 64 actions, 256 forbidden patterns, 4,096 Cartesian states, 32 source bindings, and 4 MiB of JSON. Forward/return limits use at-most semantics. It requires exact casing, rejects unknown or missing struct fields and duplicate or case-aliased keys, and rejects null except for the optional return field.
 
+`internal/automata` has a separate `pouch-automaton/v1` contract for synchronous Boolean automata, because a whole-lattice update is not one declared action. It does not change this contract, and none of its limits apply there.
+
 The validator replays a supplied trace step by step and uses BFS to check unit-cost shortest lengths and the complete reachable closure. `no_return` requires a complete closure. If the baseline remains reachable, even beyond the return horizon, `no_return` is rejected. The validation package independently checks bounded path sets through DFS but does not generate SAT paths, read graphs or validate CNF/DRAT. Those are separate packages. No package validates natural-language source-to-rule interpretation.
 
 `native_ahe_receipt` remains a v1 compatibility field and is always false. It is a data-format field with no AHE calling or writing capability. The run bundle retains the v1 receipt unchanged; external admission/readback is a separate AHE publication record. It does not redefine v1 bytes or schema semantics.

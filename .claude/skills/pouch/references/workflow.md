@@ -1,10 +1,10 @@
 # AI workflow for Pouch
 
-Applies to `pouch 0.1.0-dev`, authority/package schema `pouch-finite-validation/v1` and bundle schema `pouch-bundle/v1`. Commands below use an approved executable on PATH named `pouch`; in the Pouch checkout, build it with `go build -o bin/pouch ./cmd/pouch` and use `bin/pouch` instead. Check `pouch version` before applying these instructions to another version.
+Applies to `pouch 0.1.0-dev`, authority/package schema `pouch-finite-validation/v1` and bundle schema `pouch-bundle/v1`; [automata](#automata) have their own schemas. Commands below use an approved executable on PATH named `pouch`; in the Pouch checkout, build it with `go build -o bin/pouch ./cmd/pouch` and use `bin/pouch` instead. Check `pouch version` before applying these instructions to another version.
 
 ## 1. Fix the inputs
 
-For a new search, obtain or prepare the following. A model drafted by the AI is proposed material until its assumptions and scope have been accepted through the user's existing workflow.
+For a new `solve` search, obtain or prepare the following; lattice gases and other [automata](#automata) take a spec or rule-table authority instead. A model drafted by the AI is proposed material until its assumptions and scope have been accepted through the user's existing workflow.
 
 | Input | Required meaning |
 | --- | --- |
@@ -128,6 +128,96 @@ pouch render --bundle new-result/bundle.json --out replay.html
 ```
 
 `replay.html` must be new. Rendering is display only; it does not authenticate the bundle, run actions or revalidate any claim. For AI inspection, read the JSON directly rather than treating browser rendering as evidence of correctness.
+
+### Automata
+
+Lattice gases and other synchronous Boolean automata use `pouch-automaton/v1`, not the finite contract. Every cell updates at each step, so there are no declared actions. The rule tables are part of the authority bytes. An AI-drafted spec is proposed material, like any other model.
+
+For a lattice gas, write a spec. `automaton-prepare` turns it into an authority:
+
+| Spec field | Meaning |
+| --- | --- |
+| `schema_version` | `pouch-automaton-spec/v1`. |
+| `request_id`, `source_binding`, `assumptions` | As in the finite authority. `assumptions` may be empty, not absent. |
+| `lattice` | `rule` (`hpp` or `fhp`), `width`, `height` and `walls`, a list of wall cell numbers that may be empty. |
+| `start`, `baseline` | Complete states. |
+| `goal` | `mask` and `value`. Only masked bits are constrained, and `value` may set only masked bits. |
+| `forward_limit`, `return_limit` | Inclusive maximum step counts, 0–4,095. |
+
+A state is a lowercase hexadecimal bit string: bit `i` is bit `i%8` of byte `i/8`, the length is exact, and unused high bits are zero. The bit of direction `d` in cell `c` is at address `c*bits+d`. A set bit is a particle leaving that cell in that direction; on the next step it arrives at the neighbor and collides there. The lattice wraps at its edges.
+
+| Rule | Bits per cell | Cell number | Direction bits |
+| --- | --- | --- | --- |
+| `hpp` | 4 | `y*width+x`, with `y` increasing north | 0 east, 1 north, 2 west, 3 south |
+| `fhp` | 6 | `r*width+q`, in axial coordinates | 0 E, 1 NE, 2 NW, 3 W, 4 SW, 5 SE |
+
+An FHP step along a direction changes `(q, r)` by `(1,0)`, `(0,1)`, `(-1,1)`, `(-1,0)`, `(0,-1)` or `(1,-1)`, in that order.
+
+No command converts positions to bit strings, so compute them:
+
+```python
+def bits(size, addresses):
+    raw = bytearray((size + 7) // 8)
+    for i in addresses:
+        raw[i // 8] |= 1 << (i % 8)
+    return raw.hex()
+
+size = 3 * 3 * 4                        # width * height * bits per cell
+start = bits(size, [4 * 4 + 0, 0 * 4 + 1])  # east from cell 4, north from cell 0
+goal = bits(size, [5 * 4 + 0, 3 * 4 + 1])   # one step later
+mask = bits(size, range(size))          # every bit: an exact goal
+```
+
+No command simulates a lattice either. An exact goal needs its state worked out in advance, which is practical only for a few particles that do not collide. Otherwise use a partial goal: put only the bits you care about in `mask`. If you constrain a bit to be set, that particle must be there at the final step; the search finds the shortest run that gets there, if one exists within the limit.
+
+This complete spec is an HPP 3×3 example. Its expected result is 1 forward step and a 2-step return, because each particle comes back after 3 steps:
+
+```json
+{
+  "schema_version": "pouch-automaton-spec/v1",
+  "request_id": "automaton-hpp-example",
+  "source_binding": {
+    "synthetic:rule": "9f317efd761c8cdcaf478e2163c3242f463699acd428c7ae53cc251fe5e7f04c"
+  },
+  "assumptions": {
+    "scope": "synthetic example; no physical claim"
+  },
+  "lattice": {
+    "rule": "hpp",
+    "width": 3,
+    "height": 3,
+    "walls": []
+  },
+  "start": "0200010000",
+  "goal": {
+    "mask": "ffffffff0f",
+    "value": "0020100000"
+  },
+  "baseline": "0200010000",
+  "forward_limit": 2,
+  "return_limit": 4
+}
+```
+
+Hash the spec, then run the three commands. `sources.json` is the same manifest as for `solve`, bound to the new authority digest:
+
+```sh
+pouch automaton-prepare --spec spec.json --sha256 "$POUCH_SPEC_SHA256" > authority.json
+pouch solve-automaton \
+  --authority authority.json --authority-sha256 "$POUCH_AUTHORITY_SHA256" \
+  --request-id "$POUCH_REQUEST_ID" --sources sources.json --out new-result \
+  --solver "$POUCH_CADICAL" --solver-sha256 "$POUCH_CADICAL_SHA256" \
+  --checker "$POUCH_DRAT_TRIM" --checker-sha256 "$POUCH_DRAT_TRIM_SHA256"
+pouch automaton-verify \
+  --authority authority.json --authority-sha256 "$POUCH_AUTHORITY_SHA256" \
+  --request-id "$POUCH_REQUEST_ID" --bundle new-result/bundle.json
+```
+
+`automaton-prepare` accepts only the `hpp` and `fhp` lattice gases. Other automata need a hand-written authority with their rule tables; the format is in `internal/automata/README.md` in the Pouch repository.
+
+The result directory holds `index.html`, an offline replay, and `bundle.json`. In the bundle, `search.forward.states` and `search.return.trace.states` are bit strings to decode with the layout above, `search.deterministic` says whether the system has choices, and each entry of `choices` holds that step's choice bits. Budgets are `--max-queries`, `--max-variables`, `--max-clauses`, `--max-literals`, `--max-input-bytes` and `--max-orbit-steps`; exceeding one gives `INCONCLUSIVE`. Every length up to the answer is a separate query, so keep limits small: a 206-step return took 218 queries.
+
+Read `status`, `recovery_status` and `reason` separately. An `UNKNOWN` recovery exits 2 from `solve-automaton` even when the forward run is verified; `RETURN_EXISTS_BEYOND_SEARCH_BOUND`, `ORBIT_NOT_CLOSED` and `CHOICES_NOT_ENUMERATED` do not establish that no return exists. `automaton-verify` recomputes the conclusions from the authority without rerunning the solver or checking saved proofs; its `walk_checked` is false when length claims rest on recorded queries, as with choices. It can pass a result whose recovery is `UNKNOWN`, so read its fields rather than its exit code alone. Steps count model updates and make no claim about a real fluid.
 
 ## 3. Interpret the actual JSON
 

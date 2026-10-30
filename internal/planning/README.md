@@ -51,7 +51,7 @@ solver call may establish exhaustion; another SAT path makes the result partial.
 |---|---|
 | `SchemaVersion` | `pouch-search/v1`. |
 | `Policy` | Fixed `simple-first-hit/action-sequence`; defined below. It is an output label, not a selectable input strategy. |
-| `Matrix` | Operation projection used by the encoder, not an evidence adjacency matrix. May be empty if input validation failed. |
+| `Matrix` | Operation projection of the declared rules, saved for reports. Calx `finite` makes its own equal projection when encoding. It is not an evidence adjacency matrix. May be empty if input validation failed. |
 | `Options` | Effective resource budgets after defaults; not initialized if option validation failed. |
 | `ForwardLimit` / `ReturnLimit` | Copies of the contract's inclusive length bounds. |
 | `Forward` | Forward paths discovered so far, possibly a partial collection. |

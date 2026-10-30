@@ -1,0 +1,24 @@
+{
+  "schema_version": "pouch-automaton-spec/v1",
+  "request_id": "automaton-hpp-example",
+  "source_binding": {
+    "synthetic:rule": "9f317efd761c8cdcaf478e2163c3242f463699acd428c7ae53cc251fe5e7f04c"
+  },
+  "assumptions": {
+    "scope": "synthetic example; no physical claim"
+  },
+  "lattice": {
+    "rule": "hpp",
+    "width": 3,
+    "height": 3,
+    "walls": []
+  },
+  "start": "0200010000",
+  "goal": {
+    "mask": "ffffffff0f",
+    "value": "0020100000"
+  },
+  "baseline": "0200010000",
+  "forward_limit": 2,
+  "return_limit": 4
+}

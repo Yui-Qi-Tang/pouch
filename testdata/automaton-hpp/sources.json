@@ -1,0 +1,12 @@
+{
+  "schema_version": "pouch-sources/v1",
+  "authority_sha256": "51de8a77896b22ae8fe98214307834d25a6e00da2de18a46e851118b591cf093",
+  "request_id": "automaton-hpp-example",
+  "sources": [
+    {
+      "id": "synthetic:rule",
+      "file": "sources/rule.txt",
+      "sha256": "9f317efd761c8cdcaf478e2163c3242f463699acd428c7ae53cc251fe5e7f04c"
+    }
+  ]
+}

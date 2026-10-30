@@ -162,6 +162,43 @@ A no-return claim within the model requires the baseline to be absent from R. Ev
 
 Failure to find a return within the return horizon does not prove no return: a path may exist at h+1. Even with a valid bounded UNSAT proof, the negative claim must be rejected if the complete reachable set contains the baseline. This check is already implemented in the v1 validator.
 
+### Lattice gas examples
+
+The diagrams below come from recorded `solve-automaton` runs on lattice gases, a kind of synchronous automaton. Every cell updates at each step, so an edge is one update of the whole lattice, not one declared action. States are `pouch-automaton/v1` bit strings in hexadecimal. See [automaton authorities](../internal/automata/README.md) for the format. Each step here is a model update, and nothing below claims to reproduce a real fluid.
+
+**A return without an inverse rule.** The HPP rule on a 2×2 lattice is reversible, so its one possible run is a cycle. This start lies on a cycle of 12 states. The goal is 5 steps along it, and the only way back under the same rule is 7 more steps forward. Nothing retraces a state, and the return is longer than the forward run.
+
+```mermaid
+flowchart LR
+    s0(["50f8<br/>start and baseline"]) --> s1["5d0a"] --> s2["af08"] --> s3["a855"] --> s4["00fd"] --> s5(["58aa<br/>goal"])
+    s5 -.-> r1["5f08"] -.-> r2["ad05"] -.-> r3["a0f8"] -.-> r4["585a"] -.-> r5["0f0d"] -.-> r6["a8a5"] -.-> s0
+```
+
+Solid edges are the forward run and dotted edges are the return.
+
+**No return.** This two-cell rule sets each cell to the OR of both, so `01` and `02` merge into `03`. All four states are shown. The closure from the endpoint is `{03}`, which excludes the baseline `01`, so the model has no return, as in the fixed-point argument above. It is irreversible because two states step to the same state.
+
+```mermaid
+flowchart LR
+    a(["01<br/>start and baseline"]) --> c(["03<br/>goal"])
+    b["02"] --> c
+    d["00"] --> d
+    c --> c
+```
+
+**Choices.** An FHP collision can rotate either way, chosen by one bit per cell, so a state can have several successors. On this 2×2 lattice, the second step has four outcomes. Two runs reach the goal in 4 steps, and the search reports one shortest witness, shown by thick edges. Its return is dotted and passes through `928416` and `043869`, which lie on the other 4-step route. No single run can be walked here, so the shortest claims rest on checked UNSAT answers for the shorter lengths.
+
+```mermaid
+flowchart LR
+    s0(["648216<br/>start and baseline"]) ==> s1["0d18b0"]
+    s1 ==> s2["898416"] ==> s3["441a68"] ==> s4(["248916<br/>goal"])
+    s1 --> o1["098916"] --> o2["445a22"]
+    s1 --> o3["128916"] --> o4["047823"]
+    s1 --> o5["928416"] --> o6["043869"] --> s4
+    s4 -.-> r1["0458b2"] -.-> o5
+    o6 -.-> s0
+```
+
 ## 9. Distance, cost, and evolution views
 
 For structural and field differences, first align IDs, types, and scope, then separately calculate changes in node presence, edge identity, relation adjacency, payloads, and state fields. A one-hot value change flips two bits but changes only one field; bit counts must not be reported as action counts.

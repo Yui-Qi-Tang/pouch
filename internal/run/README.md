@@ -20,9 +20,10 @@ This page documents current values, not new enum enforcement or a new API.
 | `Inputs.Sources` | Validated manifest. |
 | `Inputs.Content` | Source ID → checked raw content bytes. |
 
-`ReadInputs` reads files. `SaveInputs` copies them into a fresh run and updates
-the portable file references. These are concrete file functions, not a common
-source-provider interface.
+`ReadInputs` reads files. `ReadSources`, which it calls, checks a source manifest
+against bound digests and is shared with `solve-automaton`. `SaveInputs` copies
+them into a fresh run and updates the portable file references. These are concrete
+file functions, not a common source-provider interface.
 
 ## Optional pinned graph input
 

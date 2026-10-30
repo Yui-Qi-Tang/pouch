@@ -18,6 +18,7 @@ Version: **`0.1.0-dev`** — in development, unreleased.
 - **A separate recovery result:** a shortest model return, a checked finite-model no-return conclusion, or an inconclusive result. Reaching the goal alone does not establish recoverability.
 - **Inspectable reasoning:** source identities, assumptions, guards, effects, unchanged fields, per-step states and operation counts.
 - **Declared repair combinations:** compile finite options and constraints, materialize a checked choice into a patch, and bind separately produced execution records.
+- **Synchronous automata:** search lattice gases and other Boolean automata declared as rule tables, with the same separate forward and recovery results.
 - **Two views of one result:** an offline interactive HTML report for people, and a versioned JSON bundle for AI and other tools.
 
 For example, a change may reach its goal in two operations while returning to the baseline requires three. The report shows both routes. These costs count declared operations; real execution time and external side effects require an execution adapter and their own checks.
@@ -115,6 +116,21 @@ A separately authorized runner applies, tests and restores it.
 `candidate-bind-runtime` then checks that runner's recorded evidence; it does
 not execute the patch or authenticate the logs. Candidate model returns withdraw
 selections, not changes in a real checkout.
+
+## Synchronous automata
+
+`pouch solve` runs one declared action per step. Lattice gases update every cell at
+once, so they use a separate format and commands, with their own limits:
+`automaton-prepare` writes rule tables for the HPP or FHP-I lattice gas,
+`solve-automaton` searches them, and `automaton-verify` rechecks a saved result
+from the caller's authority. Reports are offline HTML replays and JSON bundles.
+
+The return uses the same rule as the forward run, so on a reversible lattice it
+continues around a cycle. On large lattices that can exceed any practical bound,
+and the result is reported as unknown rather than impossible. Steps count model
+updates, and nothing here claims to reproduce a real fluid. See
+[automaton authorities](internal/automata/README.md) and the
+[state diagrams](docs/THEORY.md#lattice-gas-examples).
 
 ## Continuous integration
 

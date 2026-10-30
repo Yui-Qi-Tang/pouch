@@ -1,5 +1,8 @@
 # Local inputs and result bundles
 
+This page covers `pouch solve`. Synchronous automata have their own schemas; see
+[automaton authorities](../internal/automata/README.md).
+
 `authority.json` is the preserved strict `pouch-finite-validation/v1` contract. A trusted caller independently supplies its exact byte SHA-256 and request ID. It contains finite fields/actions, start, Goal, full baseline, search bounds, assumptions and selected source bindings. It is not inferred from evidence graph edges.
 
 The local source manifest has this separate schema:

@@ -1,6 +1,8 @@
 # Go planning and SAT evidence
 
-The current implementation compiles `pouch-finite-validation/v1` contracts. It
+This page covers `pouch solve`, which compiles `pouch-finite-validation/v1`
+contracts. Synchronous automata have a separate
+[search and certification](../internal/automata/README.md) path. `solve`
 supports categorical string coordinates, exact conjunctive guards, constant
 effects, explicit frame partitions, forbidden state patterns and unit costs.
 It does not synthesize operations or interpret evidence edge labels as guards.

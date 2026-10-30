@@ -276,6 +276,9 @@ below are under its `pouch/` subtree. The Product migration is included in
 based on `480aec39fbce2cca1ca4abbe3780f4fae3c00eca`, with frozen source identities
 and the final binary SHA-256
 `e80631b9e73eaae1731c8afaf65b6fe40ca382f7a9461010443d23ebbd511a48`.
+These Product hashes are the identities recorded by the runs. A later author
+rewrite of the published history changed them: the same commits are now `3237c49`
+and `30c2967`, with the same content.
 
 - **H30 search counts**: `experiments/h30/runs/h30-20261003-01/summary.json`
   SHA-256: `9a25addcbbc33a711b876d41851eedf6ca8868f7db1001509dd82650bd35cee4`.

@@ -23,6 +23,13 @@ Use the [CLI workflow](.claude/skills/pouch/references/workflow.md) for complete
 
 Keep outputs in ignored run directories, preserve prior reports and manifests, and remove credentials and private host paths from material shared externally. Report generation does not authorize AHE publication, commit or push.
 
+## Automaton workflow
+
+Lattice gases and other synchronous automata use `automaton-prepare`,
+`solve-automaton` and `automaton-verify`, not `solve`. See the
+[CLI workflow](.claude/skills/pouch/references/workflow.md#automata) and
+[automaton authorities](internal/automata/README.md).
+
 ## Candidate workflow
 
 Follow the shared candidate rules in [AGENTS.md](AGENTS.md#candidate-workflow)

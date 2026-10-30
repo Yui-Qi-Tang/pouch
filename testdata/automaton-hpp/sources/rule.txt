@@ -1,0 +1,1 @@
+Synthetic HPP example: one particle moving east and one moving north on a 3x3 lattice.
