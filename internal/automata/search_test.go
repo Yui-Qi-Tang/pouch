@@ -342,3 +342,86 @@ type failing struct{}
 func (failing) Solve(context.Context, string, sat.CNF) (planning.SolveResult, error) {
 	return planning.SolveResult{Status: "INCONCLUSIVE"}, errors.New("tool execution failed")
 }
+
+// reachable returns the shortest step count from start to every state, trying
+// every choice at every step. It is the oracle for systems with choices, where
+// no single run can be walked.
+func reachable(a *Authority, start automaton.State, limit int) map[string]int {
+	distance := map[string]int{encodeBits(start): 0}
+	frontier := []automaton.State{start}
+	combinations := 1 << a.system.totalChoices
+	for depth := 1; depth <= limit && len(frontier) > 0; depth++ {
+		var next []automaton.State
+		for _, state := range frontier {
+			for c := range combinations {
+				choices := make([]bool, a.system.totalChoices)
+				for i := range choices {
+					choices[i] = c>>i&1 == 1
+				}
+				following := a.system.step(state, choices)
+				if _, seen := distance[encodeBits(following)]; !seen {
+					distance[encodeBits(following)] = depth
+					next = append(next, following)
+				}
+			}
+		}
+		frontier = next
+	}
+	return distance
+}
+
+func TestSearchWithChoicesMatchesExhaustiveReachability(t *testing.T) {
+	r := rand.New(rand.NewPCG(11, 12))
+	lattice := Lattice{Rule: "fhp", Width: 2, Height: 2, Walls: []int{}}
+	checked, returned, missing := 0, 0, 0
+	for attempt := 0; attempt < 400 && checked < 40; attempt++ {
+		start := make(automaton.State, 24)
+		for i := range start {
+			start[i] = r.Float64() < 0.25
+		}
+		_, probe := prepare(t, testSpec(lattice, start))
+		distance := reachable(probe, start, 5)
+		var goal string
+		cost := 0
+		for state, d := range distance {
+			if d > cost || (d == cost && state < goal) {
+				goal, cost = state, d
+			}
+		}
+		if cost == 0 {
+			continue
+		}
+		state, ok := decodeBits(goal, 24)
+		if !ok {
+			t.Fatal(goal)
+		}
+		back, found := reachable(probe, state, 6)[encodeBits(start)]
+		s := testSpec(lattice, start)
+		s.Goal, s.ForwardLimit, s.ReturnLimit = exactGoal(state), 5, 6
+		_, a := prepare(t, s)
+		result, b, err := certified(t, a, Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Deterministic || result.Forward == nil || len(result.Forward.Choices) != cost || !b.ForwardVerified {
+			t.Fatalf("forward: want %d, got %+v", cost, b)
+		}
+		switch {
+		case found:
+			returned++
+			if b.ReturnSteps == nil || *b.ReturnSteps != back || b.RecoveryStatus != "RETURN_VERIFIED" {
+				t.Fatalf("return: want %d, got %+v", back, b)
+			}
+		default:
+			missing++
+			if result.Return.Status != "NO_RETURN_WITHIN_BOUND" || b.RecoveryStatus != "UNKNOWN" || b.Reason != "CHOICES_NOT_ENUMERATED" {
+				t.Fatalf("no return: got %+v", b)
+			}
+		}
+		checked++
+	}
+	if checked < 40 || returned == 0 {
+		t.Fatalf("checked %d, returned %d, no return %d", checked, returned, missing)
+	}
+	t.Logf("checked %d: %d returns, %d with no return within the limit", checked, returned, missing)
+}

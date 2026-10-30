@@ -97,7 +97,11 @@ cycle.
 
 This differs from `simple-first-hit/action-sequence`. Choice-free systems have one
 run, so `deterministic` is true and that run is the whole path set. With choices,
-`forward` is one shortest witness; other paths are not enumerated.
+such as FHP collisions, `forward` is one shortest witness; other paths are not
+enumerated. Its length is shortest because every shorter length ended in a checked
+UNSAT. Tests compare these lengths with an exhaustive search on small FHP lattices.
+Calx's `automaton.Query` has no way to block a found run, so listing every path
+would first need a Calx change.
 
 | Option | Meaning | Default |
 |---|---|---:|
@@ -120,7 +124,8 @@ the limit: a 4×4 return of 206 steps took 218 queries and about 29 seconds.
 `NO_PATH_WITHIN_BOUND`, `NO_PATH_IN_MODEL`, `INCONCLUSIVE` or `REJECTED`. Forward
 existence and `recovery_status` are separate.
 
-Every returned run is replayed from the tables. For a choice-free system,
+Every returned run, including its choice bits, is replayed from the tables. For a
+choice-free system,
 `Certify` also walks the only run step by step, which checks the solver's UNSAT
 answers by a separate method and rejects a false shortest or exhausted claim. It
 keeps one saved state to detect a repeat, so it can follow runs far longer than
@@ -146,7 +151,8 @@ There is no `verify` command for these results yet.
 ## Report
 
 `index.html` is an offline replay of the saved claims: forward and return runs,
-step and play controls, and a count of set bits at each step. Lattices with room
+step and play controls, and a count of set bits at each step, plus the choice bits
+used at each step of a system with choices. Lattices with room
 show each particle's direction; larger ones show density. It draws `hpp` with
 north up and `fhp` as a sheared hexagonal grid, as `lga` defines them.
 `pouch render --bundle bundle.json --out replay.html` writes it again from a saved

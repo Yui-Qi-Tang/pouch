@@ -69,7 +69,7 @@ footer{padding:0 max(16px,calc(50vw - 560px)) 24px;color:var(--muted);font-size:
 <input id="step" type="range" min="0" value="0" aria-label="Step">
 <label>Speed<select id="speed"><option value="1">1 step/s</option><option value="2" selected>2 steps/s</option><option value="5">5 steps/s</option><option value="10">10 steps/s</option><option value="30">30 steps/s</option></select></label>
 </div>
-<div class="readout" aria-live="polite"><span id="step-label"></span><span id="count-label"></span><span id="change-label"></span></div>
+<div class="readout" aria-live="polite"><span id="step-label"></span><span id="count-label"></span><span id="change-label"></span><span id="choice-label"></span></div>
 </div>
 <p id="legend" class="legend"></p>
 </section>
@@ -204,6 +204,12 @@ function draw() {
   }
 }
 
+function setBits(text) {
+  let count = 0;
+  for (let i = 0; i < text.length; i += 2) for (let byte = parseInt(text.substr(i, 2), 16); byte; byte &= byte - 1) count++;
+  return count;
+}
+
 function showStep() {
   const state = frames[step];
   if (!state) return;
@@ -214,6 +220,7 @@ function showStep() {
   setText('step-label', 'Step ' + step + ' of ' + total);
   byId('count-label').replaceChildren(noun + ' ', Object.assign(document.createElement('b'), {textContent: count}));
   setText('change-label', step ? 'Changed ' + plural(changed, 'bit') : 'Start state');
+  setText('choice-label', search.deterministic ? '' : step ? 'Choice bits set ' + setBits(runs[direction].choices[step - 1]) : '');
   byId('step').value = step;
   byId('first').disabled = byId('back').disabled = step === 0;
   byId('next').disabled = byId('last').disabled = step === total;
@@ -240,8 +247,9 @@ function play() {
 
 function legend() {
   const size = layout().size;
-  if (vectors && size >= 14) return 'Each line runs from a cell’s center toward a particle’s direction of travel; the dot is its head. North is up.' + (walls.size ? ' Filled cells are walls.' : '');
-  if (vectors) return 'Darker cells hold more particles. Direction marks appear on smaller lattices.' + (walls.size ? ' Filled cells are walls.' : '');
+  const choices = search.deterministic ? '' : ' Choice bits pick the outcome of a collision; this is one possible run.';
+  if (vectors && size >= 14) return 'Each line runs from a cell’s center toward a particle’s direction of travel; the dot is its head. North is up.' + (walls.size ? ' Filled cells are walls.' : '') + choices;
+  if (vectors) return 'Darker cells hold more particles. Direction marks appear on smaller lattices.' + (walls.size ? ' Filled cells are walls.' : '') + choices;
   return 'Darker cells have more set bits.';
 }
 
