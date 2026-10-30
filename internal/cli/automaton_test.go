@@ -91,3 +91,26 @@ func TestSolveAutomatonWithPinnedTools(t *testing.T) {
 		t.Fatalf("%+v", bundle)
 	}
 }
+
+func TestRenderSelectsTheAutomatonViewer(t *testing.T) {
+	dir := t.TempDir()
+	raw, err := json.Marshal(automata.Bundle{SchemaVersion: automata.BundleVersion, RequestID: "fixture", Diagnostics: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, target := filepath.Join(dir, "bundle.json"), filepath.Join(dir, "replay.html")
+	if err := os.WriteFile(bundle, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	if got := Run(context.Background(), []string{"render", "--bundle", bundle, "--out", target}, &out, &errs); got != 0 {
+		t.Fatalf("exit %d: %s", got, errs.String())
+	}
+	page, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(page, []byte("Pouch automaton replay")) {
+		t.Fatal("wrong viewer")
+	}
+}

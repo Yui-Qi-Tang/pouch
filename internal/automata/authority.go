@@ -53,6 +53,17 @@ type Pattern struct {
 	Value string `json:"value"`
 }
 
+// Display tells a viewer how to lay out cells. It has no effect on the rule, the
+// search or any check. Walls lists cells to mark as walls; rule tables, not this
+// list, are what make them behave as walls.
+type Display struct {
+	// hpp, fhp, or grid.
+	Kind    string `json:"kind"`
+	Columns int    `json:"columns"`
+	Rows    int    `json:"rows"`
+	Walls   []int  `json:"walls"`
+}
+
 // Contract is supplied out of band by the caller, never selected by the sender.
 type Contract struct {
 	SchemaVersion string            `json:"schema_version"`
@@ -65,6 +76,8 @@ type Contract struct {
 	Baseline      string            `json:"baseline"`
 	ForwardLimit  int               `json:"forward_limit"`
 	ReturnLimit   int               `json:"return_limit"`
+	// Optional. Without it a viewer shows the cells as one row.
+	Display Display `json:"display,omitzero"`
 }
 
 // Authority owns a private decoded copy and is immutable after construction.
@@ -74,6 +87,7 @@ type Authority struct {
 	start    automaton.State
 	baseline automaton.State
 	goal     automaton.Pattern
+	display  Display
 }
 
 // NewAuthority verifies the external digest and rejects unsupported models.
@@ -123,7 +137,31 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 			goal[automaton.Bit{Cell: i / s.bits, Index: i % s.bits}] = value[i]
 		}
 	}
-	return &Authority{contract: c, system: s, start: start, baseline: baseline, goal: goal}, nil
+	display := Display{Kind: "grid", Columns: len(s.cells), Rows: 1, Walls: []int{}}
+	if c.Display.Walls != nil {
+		if !c.Display.valid(s) {
+			return nil, reject("DISPLAY")
+		}
+		display = c.Display
+	}
+	return &Authority{contract: c, system: s, start: start, baseline: baseline, goal: goal, display: display}, nil
+}
+
+func (d Display) valid(s *system) bool {
+	switch {
+	case d.Kind == "hpp" && s.bits == 4, d.Kind == "fhp" && s.bits == 6, d.Kind == "grid":
+	default:
+		return false
+	}
+	if d.Columns < 1 || d.Rows < 1 || d.Columns > len(s.cells)/d.Rows || d.Columns*d.Rows != len(s.cells) {
+		return false
+	}
+	for i, wall := range d.Walls {
+		if wall < 0 || wall >= len(s.cells) || slices.Contains(d.Walls[:i], wall) {
+			return false
+		}
+	}
+	return true
 }
 
 // System returns the automaton the authority declares.

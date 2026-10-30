@@ -7,7 +7,7 @@ declared action runs at each step. The two formats and their limits are separate
 
 The package validates authorities, searches them through pinned solver tools and
 checks the results against the rule tables. Use `pouch solve-automaton`; `pouch
-solve` does not accept this schema. Reports are JSON only for now.
+solve` does not accept this schema.
 
 ## Authority
 
@@ -23,6 +23,7 @@ solve` does not accept this schema. Reports are JSON only for now.
 | `start` / `baseline` | Complete states, as bit strings. |
 | `goal` | `mask` and `value` bit strings. `mask` must set a bit; `value` may set only masked bits. |
 | `forward_limit` / `return_limit` | Inclusive maximum step counts, 0–4,095. |
+| `display` | Optional layout for viewers: `kind` (`hpp`, `fhp` or `grid`), `columns`, `rows` and `walls`. |
 
 The whole file is at most 4 MiB and follows the same strict JSON rules as other
 authorities: no nulls, unknown fields, missing fields or duplicate keys. The size
@@ -31,6 +32,10 @@ The digest of its exact bytes is the caller's pin.
 
 A state bit's address is `cell*bits+index`. A cell's `inputs` list distinct
 addresses, and their count must equal the rule's `inputs`.
+
+`display` has no effect on the rule, the search or any check; its `walls` only
+mark cells in the viewer. `columns` times `rows` must equal the cell count, `hpp`
+needs 4 bits per cell and `fhp` needs 6. Without it, a viewer shows one row.
 
 ## Rule tables
 
@@ -80,7 +85,7 @@ and compare their CNF encoding digests with those of the `lga` types.
 
 `pouch solve-automaton` takes the inputs of `pouch solve`, without graph or AHE
 options, and writes `authority.json`, `sources.json`, `sources/`, `solver/`,
-`bundle.json` and `manifest.json` to a new directory.
+`bundle.json`, `index.html` and `manifest.json` to a new directory.
 
 The policy is `shortest-run/synchronous-boolean/v2`. For each length from 0 to the
 limit, one query asks for a run of exactly that length from the start to the goal.
@@ -136,5 +141,13 @@ with 2, even when the forward run is verified. Random lattices of 6×6 and large
 are usually in this state: each of 15 sampled states took more than 200,000 steps
 to come back.
 
-There is no `verify` command for these results yet. Rendering them as HTML is also
-not available yet.
+There is no `verify` command for these results yet.
+
+## Report
+
+`index.html` is an offline replay of the saved claims: forward and return runs,
+step and play controls, and a count of set bits at each step. Lattices with room
+show each particle's direction; larger ones show density. It draws `hpp` with
+north up and `fhp` as a sheared hexagonal grid, as `lga` defines them.
+`pouch render --bundle bundle.json --out replay.html` writes it again from a saved
+bundle. Neither checks the claims it displays.

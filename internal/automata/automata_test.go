@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/rand/v2"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -230,6 +231,7 @@ func TestAuthorityRejections(t *testing.T) {
 		"CELL_INPUT":         func(c *Contract) { c.Model.Cells[0].Inputs[0] = 16 },
 		"STATE_ENCODING":     func(c *Contract) { c.Start = strings.ToUpper("ff") + c.Start[2:] },
 		"GOAL_PATTERN":       func(c *Contract) { c.Goal = Pattern{Mask: "0000", Value: "0000"} },
+		"DISPLAY":            func(c *Contract) { c.Display.Columns = 3 },
 	}
 	for code, mutate := range cases {
 		var c Contract
@@ -327,6 +329,40 @@ func TestBitStrings(t *testing.T) {
 	for _, bad := range []string{"05", "050300", "05ff", "0G03", "0A03"} {
 		if _, ok := decodeBits(bad, 10); ok {
 			t.Fatalf("accepted %q", bad)
+		}
+	}
+}
+
+func TestDisplayIsOptionalAndChecked(t *testing.T) {
+	start := make(automaton.State, 16)
+	raw, a := prepare(t, testSpec(Lattice{Rule: "hpp", Width: 2, Height: 2, Walls: []int{}}, start))
+	if want := (Display{Kind: "hpp", Columns: 2, Rows: 2, Walls: []int{}}); !reflect.DeepEqual(a.display, want) {
+		t.Fatalf("%+v", a.display)
+	}
+	var c Contract
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatal(err)
+	}
+	c.Display = Display{}
+	bare, _ := json.Marshal(c)
+	plain, err := NewAuthority(bare, validation.Digest(bare))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (Display{Kind: "grid", Columns: 4, Rows: 1, Walls: []int{}}); !reflect.DeepEqual(plain.display, want) {
+		t.Fatalf("%+v", plain.display)
+	}
+	for name, d := range map[string]Display{
+		"kind":          {Kind: "hex", Columns: 2, Rows: 2, Walls: []int{}},
+		"bits for fhp":  {Kind: "fhp", Columns: 2, Rows: 2, Walls: []int{}},
+		"size":          {Kind: "hpp", Columns: 4, Rows: 2, Walls: []int{}},
+		"wall range":    {Kind: "hpp", Columns: 2, Rows: 2, Walls: []int{4}},
+		"wall repeated": {Kind: "hpp", Columns: 2, Rows: 2, Walls: []int{1, 1}},
+	} {
+		c.Display = d
+		changed, _ := json.Marshal(c)
+		if _, err := NewAuthority(changed, validation.Digest(changed)); !isRejection(err, "DISPLAY") {
+			t.Fatalf("%s: %v", name, err)
 		}
 	}
 }

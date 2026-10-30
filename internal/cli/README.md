@@ -25,7 +25,7 @@ conversion between the two commands.
 | `verify` | `validation.Receipt` | Successful original-rule model-package validation. No `status` field is added to this receipt. |
 | `render` | `{status: "RENDERED", verification: "saved claims only; no re-verification"}` | HTML was rendered. No renewed proof/receipt validation. |
 | `automaton-prepare` | `pouch-automaton/v1` authority JSON | Rule tables of a caller-declared lattice gas. See [automata](../automata/README.md). |
-| `solve-automaton` | Summary JSON; result directory with `pouch-automaton-bundle/v1` | Searches an automaton authority. Exit codes follow `solve`. |
+| `solve-automaton` | Summary JSON; result directory with `pouch-automaton-bundle/v1` and `index.html` | Searches an automaton authority. Exit codes follow `solve`. |
 | `candidate-prepare` | v1 validation authority JSON | Compiled caller-declared options and constraints. |
 | `candidate-materialize` | `pouch-materialization/v1` | New rendered files/patch; `runtime_status=NOT_RUN`, no execution. |
 | `candidate-bind-runtime` | `pouch-runtime-binding/v1` | `RECORDED_CHECKS_PASS` checks pinned observations, not fresh execution. |

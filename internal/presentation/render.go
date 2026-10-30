@@ -11,11 +11,15 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Yui-Qi-Tang/pouch/internal/automata"
 	"github.com/Yui-Qi-Tang/pouch/internal/run"
 )
 
 //go:embed viewer.html
 var viewer string
+
+//go:embed automaton.html
+var automatonViewer string
 
 // Render writes a self-contained offline viewer. The embedded JSON is the exact
 // marshaled bundle, not a separately computed interpretation of its results.
@@ -45,6 +49,24 @@ func Render(w io.Writer, bundle run.Bundle) error {
 		"__POUCH_VIEW_DETAILS_JSON__", string(details),
 	).Replace(viewer)
 	if _, err := io.WriteString(w, document); err != nil {
+		return fmt.Errorf("writing presentation: %w", err)
+	}
+	return nil
+}
+
+// RenderAutomaton writes a self-contained offline replay of an automaton result.
+// It displays saved claims and does not check them.
+func RenderAutomaton(w io.Writer, bundle automata.Bundle) error {
+	for _, source := range bundle.Sources.Sources {
+		if !localArtifact(source.File) {
+			return fmt.Errorf("source %q has a non-portable artifact path", source.ID)
+		}
+	}
+	raw, err := json.Marshal(bundle)
+	if err != nil {
+		return fmt.Errorf("encoding presentation bundle: %w", err)
+	}
+	if _, err := io.WriteString(w, strings.Replace(automatonViewer, "__POUCH_AUTOMATON_JSON__", string(raw), 1)); err != nil {
 		return fmt.Errorf("writing presentation: %w", err)
 	}
 	return nil

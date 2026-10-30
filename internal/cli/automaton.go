@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/automata"
+	"github.com/Yui-Qi-Tang/pouch/internal/presentation"
 	"github.com/Yui-Qi-Tang/pouch/internal/run"
 	"github.com/Yui-Qi-Tang/pouch/internal/sat"
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
@@ -109,6 +111,15 @@ func solveAutomaton(ctx context.Context, args []string, out, errout io.Writer) i
 		return 2
 	}
 	if e = saveGovernanceFile(*dir, "bundle.json", append(encoded, '\n')); e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
+	var html bytes.Buffer
+	if e = presentation.RenderAutomaton(&html, bundle); e != nil {
+		fmt.Fprintln(errout, e)
+		return 2
+	}
+	if e = saveGovernanceFile(*dir, "index.html", html.Bytes()); e != nil {
 		fmt.Fprintln(errout, e)
 		return 2
 	}

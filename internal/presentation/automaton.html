@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Pouch · Automaton replay</title>
+<style>
+:root{--bg:#eef2f4;--surface:#fff;--text:#172c39;--muted:#536b78;--line:#d9e2e6;--accent:#166e75;--head:#163847;--head-text:#fff;--cell:#f4f7f8;--wall:#536b78;--warn-bg:#fdf3dc;--warn-text:#6b4a00;--ok-bg:#dff2ee;--ok-text:#0f5a4e;--bad-bg:#fbe4e1;--bad-text:#8a2318;font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}
+@media (prefers-color-scheme:dark){:root{--bg:#10191f;--surface:#18242c;--text:#e4ecf0;--muted:#9db0bb;--line:#2c3c46;--accent:#5cc4cb;--head:#0c1419;--cell:#202e37;--wall:#7d919c;--warn-bg:#3a2f12;--warn-text:#f1d48b;--ok-bg:#12352f;--ok-text:#9ae0d0;--bad-bg:#42201c;--bad-text:#f4b5ab}}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg)}
+header{background:var(--head);color:var(--head-text);padding:24px max(16px,calc(50vw - 560px))}
+.top{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+h1{margin:2px 0 4px;font-size:26px;font-weight:650}h2{margin:0 0 12px;font-size:17px;font-weight:650}
+.subtitle{margin:0;opacity:.8;overflow-wrap:anywhere}
+main{padding:16px max(16px,calc(50vw - 560px)) 32px;display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.label{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.value{font-size:19px;font-weight:650;margin:2px 0 4px;overflow-wrap:anywhere}
+.note{margin:0;color:var(--muted);font-size:14px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--warn-bg);color:var(--warn-text)}
+.pill.ok{background:var(--ok-bg);color:var(--ok-text)}.pill.bad{background:var(--bad-bg);color:var(--bad-text)}
+button,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 11px;min-height:36px}
+button:not(:disabled){cursor:pointer}button:disabled{opacity:.5}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:transparent;color:var(--head-text);border-color:rgba(255,255,255,.45)}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.stage{background:var(--cell);border-radius:8px;display:flex;justify-content:center;padding:8px;min-height:120px}
+canvas{display:block;max-width:100%}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.controls input[type=range]{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.controls label{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:14px}
+.readout{display:flex;gap:2px 20px;flex-wrap:wrap;margin:12px 0 0;font-variant-numeric:tabular-nums}
+.readout b{font-weight:650}
+.legend{margin:10px 0 0;color:var(--muted);font-size:13px}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+dl{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:4px 16px;margin:0}
+dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+details{margin-top:12px}summary{cursor:pointer;color:var(--accent)}
+.scroll{overflow:auto;max-height:320px;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:4px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--surface)}
+footer{padding:0 max(16px,calc(50vw - 560px)) 24px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header><div class="top"><div><div class="eyebrow">Synchronous automaton · bounded search · replay</div><h1>Pouch automaton replay</h1><p id="request" class="subtitle"></p></div><button id="download" class="primary">Download AI bundle · JSON</button></div></header>
+<main>
+<section class="summary" aria-label="Result summary">
+<div class="card"><div class="label">Forward</div><div id="forward-value" class="value"></div><p id="forward-note" class="note"></p></div>
+<div class="card"><div class="label">Recovery</div><div id="recovery-value" class="value"></div><p id="recovery-note" class="note"></p></div>
+<div class="card"><div class="label">Run</div><div id="run-value" class="value"></div><p id="run-note" class="note"></p></div>
+</section>
+<section class="card">
+<h2>State replay</h2>
+<div class="tabs" role="group" aria-label="Run to replay"><button id="tab-forward" type="button">Forward</button><button id="tab-return" type="button">Return</button></div>
+<div id="stage" class="stage"><canvas id="lattice" role="img"></canvas></div>
+<div id="empty" class="empty" hidden></div>
+<div id="player">
+<div class="controls">
+<button id="first" type="button" aria-label="First step">⏮</button>
+<button id="back" type="button" aria-label="Previous step">◀</button>
+<button id="play" type="button">Play</button>
+<button id="next" type="button" aria-label="Next step">▶</button>
+<button id="last" type="button" aria-label="Last step">⏭</button>
+<input id="step" type="range" min="0" value="0" aria-label="Step">
+<label>Speed<select id="speed"><option value="1">1 step/s</option><option value="2" selected>2 steps/s</option><option value="5">5 steps/s</option><option value="10">10 steps/s</option><option value="30">30 steps/s</option></select></label>
+</div>
+<div class="readout" aria-live="polite"><span id="step-label"></span><span id="count-label"></span><span id="change-label"></span></div>
+</div>
+<p id="legend" class="legend"></p>
+</section>
+<section class="card">
+<h2>Search and identity</h2>
+<dl id="facts"></dl>
+<details><summary id="queries-summary"></summary><div class="scroll"><table><thead><tr><th>Query</th><th>Direction</th><th>Steps</th><th>Answer</th><th>Verified</th></tr></thead><tbody id="queries"></tbody></table></div></details>
+<details><summary>Sources</summary><div class="scroll"><table><thead><tr><th>Source</th><th>File</th><th>SHA-256</th></tr></thead><tbody id="sources"></tbody></table></div></details>
+</section>
+</main>
+<footer>Offline viewer · saved claims, not re-verified · steps count model updates, not physical time · no claim that the rule models a real system</footer>
+<script id="pouch-automaton" type="application/json">__POUCH_AUTOMATON_JSON__</script>
+<script>
+'use strict';
+const raw = document.getElementById('pouch-automaton').textContent;
+const bundle = JSON.parse(raw);
+const byId = id => document.getElementById(id);
+const search = bundle.search, display = bundle.display, bits = bundle.bits;
+const cells = display.columns * display.rows, stateBits = cells * bits;
+const walls = new Set(display.walls);
+const runs = {forward: search.forward, return: search.return && search.return.trace};
+
+function setText(id, value) { byId(id).textContent = value; }
+function steps(run) { return run ? run.states.length - 1 : 0; }
+function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+function decode(text) {
+  if (text.length !== Math.ceil(stateBits / 8) * 2) throw new Error('state length does not match the display');
+  const out = new Uint8Array(stateBits);
+  for (let i = 0; i < stateBits; i++) out[i] = parseInt(text.substr((i >> 3) * 2, 2), 16) >> (i & 7) & 1;
+  return out;
+}
+
+const recoveryNotes = {
+  RETURN_FOUND_DETERMINISTIC: 'Replayed from the rule tables. It uses the same rule as the forward run, so it continues along the run rather than reversing it.',
+  RETURN_FOUND_CHOICES: 'Replayed from the rule tables. It is one shortest return found by the solver.',
+  NO_RETURN_IN_MODEL: 'The run closed without reaching the baseline, so this model has no return.',
+  RETURN_EXISTS_BEYOND_SEARCH_BOUND: 'The baseline is reached after the search limit, so the search itself found no return.',
+  ORBIT_NOT_CLOSED: 'The run neither reached the baseline nor repeated within the walked steps. A return may or may not exist.',
+  CHOICES_NOT_ENUMERATED: 'No return was found within the limit. Other choices were not ruled out, so this is not a proof of no return.',
+  RETURN_SEARCH_INCOMPLETE: 'The return search did not finish.'
+};
+
+function summarize() {
+  setText('request', bundle.request_id + ' · ' + bundle.authority_sha256);
+  if (search.forward) {
+    setText('forward-value', plural(steps(search.forward), 'step'));
+    setText('forward-note', (bundle.forward_verified ? 'Replayed from the rule tables. ' : 'Not verified. ') + (search.deterministic ? 'The system has no choices, so this is the only run.' : 'One shortest witness; other paths are not enumerated.'));
+  } else {
+    setText('forward-value', bundle.status === 'NO_PATH_IN_MODEL' ? 'No path in model' : bundle.status === 'NO_PATH_WITHIN_BOUND' ? 'No path within limit' : 'Not established');
+    setText('forward-note', bundle.status === 'NO_PATH_IN_MODEL' ? 'The run closed without reaching the goal.' : 'No run reached the goal within the checked lengths. This does not establish impossibility.');
+  }
+  const verified = bundle.recovery_status === 'RETURN_VERIFIED';
+  const hasSteps = bundle.return_steps !== null;
+  setText('recovery-value', verified ? plural(bundle.return_steps, 'step') : bundle.recovery_status === 'NO_RETURN_IN_MODEL' ? 'No return in model' : hasSteps ? 'Beyond limit: ' + plural(bundle.return_steps, 'step') : 'Unknown');
+  const key = verified ? (search.deterministic ? 'RETURN_FOUND_DETERMINISTIC' : 'RETURN_FOUND_CHOICES') : bundle.reason || bundle.recovery_status;
+  setText('recovery-note', recoveryNotes[key] || (search.forward ? '' : 'Recovery needs a forward run.'));
+  const pill = document.createElement('span');
+  pill.className = 'pill' + (bundle.status === 'REJECTED' ? ' bad' : bundle.complete ? ' ok' : '');
+  pill.textContent = bundle.status;
+  byId('run-value').replaceChildren(pill);
+  setText('run-note', bundle.complete ? 'Search and certification finished.' : (search.error ? 'Stopped: ' + search.error + '. ' : '') + 'Search and certification did not settle every question.');
+  const facts = [['Policy', search.policy], ['Lattice', display.kind + ' · ' + display.columns + ' × ' + display.rows + ' · ' + plural(bits, 'bit') + ' per cell'], ['Forward limit', search.forward_limit], ['Return limit', search.return_limit], ['Conclusion', bundle.conclusion_kind + ' · observed fact: ' + bundle.observed_fact]];
+  if (bundle.diagnostics.length) facts.push(['Diagnostics', bundle.diagnostics.join(', ')]);
+  byId('facts').replaceChildren(...facts.flatMap(([k, v]) => { const t = document.createElement('dt'), d = document.createElement('dd'); t.textContent = k; d.textContent = v; return [t, d]; }));
+  const sat = search.queries.filter(q => q.status === 'SAT').length, unsat = search.queries.filter(q => q.status === 'UNSAT').length, checked = search.queries.filter(q => q.verified).length;
+  setText('queries-summary', search.queries.length + (search.queries.length === 1 ? ' solver query' : ' solver queries') + ' · ' + sat + ' SAT · ' + unsat + ' UNSAT · ' + checked + ' verified');
+  const row = values => { const tr = document.createElement('tr'); for (const v of values) { const td = document.createElement('td'); td.textContent = v; tr.append(td); } return tr; };
+  byId('queries').replaceChildren(...search.queries.map(q => row([q.id, q.direction, q.horizon, q.status, q.verified ? 'yes' : 'no'])));
+  byId('sources').replaceChildren(...bundle.sources.sources.map(s => row([s.id, s.file, s.sha256])));
+}
+
+const canvas = byId('lattice'), context = canvas.getContext('2d');
+let direction = 'forward', step = 0, timer = null, frames = [];
+
+const hexRatio = Math.sqrt(3) / 2;
+const vectors = display.kind === 'hpp' ? [[1, 0], [0, 1], [-1, 0], [0, -1]]
+  : display.kind === 'fhp' ? [0, 1, 2, 3, 4, 5].map(i => [Math.cos(i * Math.PI / 3), Math.sin(i * Math.PI / 3)]) : null;
+
+function layout() {
+  const available = Math.max(160, byId('stage').clientWidth - 16);
+  const height = Math.max(240, Math.min(window.innerHeight * 0.55, 560));
+  const hex = display.kind === 'fhp';
+  const unitsX = hex ? display.columns + (display.rows - 1) / 2 : display.columns;
+  const unitsY = hex ? (display.rows - 1) * hexRatio + 1 : display.rows;
+  const size = Math.max(1, Math.min(available / unitsX, height / unitsY, 72));
+  return {hex, size, width: Math.ceil(unitsX * size), height: Math.ceil(unitsY * size)};
+}
+
+function color(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function draw() {
+  const state = frames[step];
+  if (!state) return;
+  const {hex, size, width, height} = layout(), ratio = window.devicePixelRatio || 1;
+  canvas.width = width * ratio; canvas.height = height * ratio;
+  canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+  const accent = color('--accent'), wall = color('--wall'), line = color('--line'), surface = color('--surface');
+  const arrows = vectors && size >= 14;
+  context.lineCap = 'round';
+  for (let r = 0; r < display.rows; r++) {
+    for (let q = 0; q < display.columns; q++) {
+      const cell = r * display.columns + q;
+      const x = hex ? (q + r / 2 + 0.5) * size : (q + 0.5) * size;
+      const y = hex ? height - (r * hexRatio + 0.5) * size : height - (r + 0.5) * size;
+      let set = 0;
+      for (let b = 0; b < bits; b++) set += state[cell * bits + b];
+      context.beginPath();
+      if (hex) context.arc(x, y, Math.max(0.5, size * 0.46), 0, 2 * Math.PI);
+      else context.rect(x - size / 2, y - size / 2, size, size);
+      const isWall = walls.has(cell);
+      if (isWall) { context.fillStyle = wall; context.fill(); }
+      if (!arrows) {
+        context.globalAlpha = set / bits;
+        context.fillStyle = accent; context.fill();
+        context.globalAlpha = 1;
+      } else {
+        if (!isWall) { context.strokeStyle = line; context.lineWidth = 1; context.stroke(); }
+        const mark = isWall ? surface : accent;
+        context.strokeStyle = mark; context.fillStyle = mark; context.lineWidth = Math.min(3, Math.max(1.5, size / 14));
+        for (let b = 0; b < bits; b++) {
+          if (!state[cell * bits + b]) continue;
+          const [dx, dy] = vectors[b], reach = size * 0.4;
+          const tx = x + dx * reach, ty = y - dy * reach;
+          context.beginPath(); context.moveTo(x, y); context.lineTo(tx, ty); context.stroke();
+          context.beginPath(); context.arc(tx, ty, Math.min(5, Math.max(2, size / 11)), 0, 2 * Math.PI); context.fill();
+        }
+      }
+    }
+  }
+}
+
+function showStep() {
+  const state = frames[step];
+  if (!state) return;
+  const total = frames.length - 1;
+  let count = 0, changed = 0;
+  for (let i = 0; i < stateBits; i++) { count += state[i]; if (step && state[i] !== frames[step - 1][i]) changed++; }
+  const noun = vectors ? 'Particles' : 'Set bits';
+  setText('step-label', 'Step ' + step + ' of ' + total);
+  byId('count-label').replaceChildren(noun + ' ', Object.assign(document.createElement('b'), {textContent: count}));
+  setText('change-label', step ? 'Changed ' + plural(changed, 'bit') : 'Start state');
+  byId('step').value = step;
+  byId('first').disabled = byId('back').disabled = step === 0;
+  byId('next').disabled = byId('last').disabled = step === total;
+  byId('play').disabled = total === 0;
+  canvas.setAttribute('aria-label', display.kind + ' lattice at step ' + step + ' of ' + total + ', ' + count + ' ' + noun.toLowerCase());
+  draw();
+}
+
+function stop() {
+  if (timer !== null) clearInterval(timer);
+  timer = null;
+  setText('play', 'Play');
+}
+
+function play() {
+  if (step === frames.length - 1) step = 0;
+  setText('play', 'Pause');
+  timer = setInterval(() => {
+    if (step >= frames.length - 1) { stop(); return; }
+    step++; showStep();
+  }, 1000 / Number(byId('speed').value));
+  showStep();
+}
+
+function legend() {
+  const size = layout().size;
+  if (vectors && size >= 14) return 'Each line runs from a cell’s center toward a particle’s direction of travel; the dot is its head. North is up.' + (walls.size ? ' Filled cells are walls.' : '');
+  if (vectors) return 'Darker cells hold more particles. Direction marks appear on smaller lattices.' + (walls.size ? ' Filled cells are walls.' : '');
+  return 'Darker cells have more set bits.';
+}
+
+function select(next) {
+  stop();
+  direction = next;
+  step = 0;
+  byId('tab-forward').setAttribute('aria-pressed', String(next === 'forward'));
+  byId('tab-return').setAttribute('aria-pressed', String(next === 'return'));
+  const run = runs[next];
+  const shown = Boolean(run);
+  byId('stage').hidden = byId('player').hidden = !shown;
+  byId('empty').hidden = shown;
+  if (!shown) {
+    frames = [];
+    setText('empty', next === 'forward' ? 'There is no forward run to replay. ' + byId('forward-note').textContent : 'There is no return run to replay.');
+    setText('legend', '');
+    return;
+  }
+  try { frames = run.states.map(decode); }
+  catch (error) { frames = []; byId('stage').hidden = byId('player').hidden = true; byId('empty').hidden = false; setText('empty', 'This bundle cannot be replayed: ' + error.message + '.'); return; }
+  byId('step').max = frames.length - 1;
+  setText('legend', legend());
+  showStep();
+}
+
+byId('tab-forward').addEventListener('click', () => select('forward'));
+byId('tab-return').addEventListener('click', () => select('return'));
+byId('first').addEventListener('click', () => { stop(); step = 0; showStep(); });
+byId('back').addEventListener('click', () => { stop(); step = Math.max(0, step - 1); showStep(); });
+byId('next').addEventListener('click', () => { stop(); step = Math.min(frames.length - 1, step + 1); showStep(); });
+byId('last').addEventListener('click', () => { stop(); step = frames.length - 1; showStep(); });
+byId('play').addEventListener('click', () => { if (timer === null) play(); else stop(); });
+byId('step').addEventListener('input', event => { stop(); step = Number(event.target.value); showStep(); });
+byId('speed').addEventListener('change', () => { if (timer !== null) { stop(); play(); } });
+byId('download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([raw], {type: 'application/json'}));
+  link.download = 'bundle.json';
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+new ResizeObserver(() => { if (frames.length) { setText('legend', legend()); draw(); } }).observe(byId('stage'));
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+
+summarize();
+byId('tab-return').disabled = !runs.return;
+select('forward');
+</script>
+</body>
+</html>

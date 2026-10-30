@@ -9,6 +9,9 @@ import (
 	"github.com/Yui-Qi-Tang/pouch/internal/run"
 )
 
+// BundleVersion identifies the automaton result schema.
+const BundleVersion = "pouch-automaton-bundle/v1"
+
 // Bundle records a search and its checks against the authority's rule tables.
 // Its status is a certification outcome, distinct from Search.Status.
 type Bundle struct {
@@ -21,11 +24,14 @@ type Bundle struct {
 	// Search and forward and recovery certification finished.
 	Complete bool `json:"complete"`
 	// model_conditional_conclusion.
-	ConclusionKind  string             `json:"conclusion_kind"`
-	ObservedFact    bool               `json:"observed_fact"`
-	Sources         run.SourceManifest `json:"sources"`
-	Search          Result             `json:"search"`
-	ForwardVerified bool               `json:"forward_verified"`
+	ConclusionKind string             `json:"conclusion_kind"`
+	ObservedFact   bool               `json:"observed_fact"`
+	Sources        run.SourceManifest `json:"sources"`
+	// State bits per cell, and how to lay out cells.
+	Bits            int     `json:"bits"`
+	Display         Display `json:"display"`
+	Search          Result  `json:"search"`
+	ForwardVerified bool    `json:"forward_verified"`
 	// RETURN_VERIFIED, NO_RETURN_IN_MODEL, or UNKNOWN.
 	RecoveryStatus string `json:"recovery_status"`
 	// Steps from the endpoint to the baseline, when a run established them. It
@@ -41,7 +47,7 @@ type Bundle struct {
 // every UNSAT answer the shortest claims depend on, and can prove there is no
 // return when the run closes without reaching the baseline.
 func Certify(ctx context.Context, a *Authority, digest string, sources run.SourceManifest, result Result) (Bundle, error) {
-	b := Bundle{SchemaVersion: "pouch-automaton-bundle/v1", ProjectVersion: "0.1.0-dev", RequestID: a.RequestID(), AuthoritySHA256: digest, Status: "INCONCLUSIVE", ConclusionKind: "model_conditional_conclusion", Sources: sources, Search: result, RecoveryStatus: "UNKNOWN", Diagnostics: []string{}}
+	b := Bundle{SchemaVersion: BundleVersion, ProjectVersion: "0.1.0-dev", RequestID: a.RequestID(), AuthoritySHA256: digest, Status: "INCONCLUSIVE", ConclusionKind: "model_conditional_conclusion", Sources: sources, Bits: a.system.bits, Display: a.display, Search: result, RecoveryStatus: "UNKNOWN", Diagnostics: []string{}}
 	refuse := func(err error) (Bundle, error) {
 		b.Status = "REJECTED"
 		return b, err

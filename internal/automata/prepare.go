@@ -61,7 +61,7 @@ func Prepare(raw []byte, expected string) ([]byte, error) {
 	}
 	assumptions := maps.Clone(s.Assumptions)
 	assumptions[specKey] = expected
-	authority, err := json.Marshal(Contract{SchemaVersion: Version, RequestID: s.RequestID, SourceBinding: s.SourceBinding, Assumptions: assumptions, Model: model, Start: s.Start, Goal: s.Goal, Baseline: s.Baseline, ForwardLimit: s.ForwardLimit, ReturnLimit: s.ReturnLimit})
+	authority, err := json.Marshal(Contract{SchemaVersion: Version, RequestID: s.RequestID, SourceBinding: s.SourceBinding, Assumptions: assumptions, Model: model, Start: s.Start, Goal: s.Goal, Baseline: s.Baseline, ForwardLimit: s.ForwardLimit, ReturnLimit: s.ReturnLimit, Display: Display{Kind: s.Lattice.Rule, Columns: s.Lattice.Width, Rows: s.Lattice.Height, Walls: s.Lattice.Walls}})
 	if err != nil {
 		return nil, fmt.Errorf("encoding authority: %w", err)
 	}

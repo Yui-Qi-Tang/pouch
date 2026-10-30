@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/ahe"
+	"github.com/Yui-Qi-Tang/pouch/internal/automata"
 	"github.com/Yui-Qi-Tang/pouch/internal/planning"
 	"github.com/Yui-Qi-Tang/pouch/internal/presentation"
 	"github.com/Yui-Qi-Tang/pouch/internal/projection"
@@ -360,18 +361,34 @@ func render(args []string, out, errout io.Writer) error {
 	if e != nil {
 		return e
 	}
-	var b run.Bundle
-	if e = json.Unmarshal(raw, &b); e != nil {
+	var version struct {
+		SchemaVersion string `json:"schema_version"`
+	}
+	if e = json.Unmarshal(raw, &version); e != nil {
 		return e
 	}
-	if b.SchemaVersion != "pouch-bundle/v1" {
+	var draw func(io.Writer) error
+	switch version.SchemaVersion {
+	case "pouch-bundle/v1":
+		var b run.Bundle
+		if e = json.Unmarshal(raw, &b); e != nil {
+			return e
+		}
+		draw = func(w io.Writer) error { return presentation.Render(w, b) }
+	case automata.BundleVersion:
+		var b automata.Bundle
+		if e = json.Unmarshal(raw, &b); e != nil {
+			return e
+		}
+		draw = func(w io.Writer) error { return presentation.RenderAutomaton(w, b) }
+	default:
 		return errors.New("unsupported bundle version")
 	}
 	html, e := os.OpenFile(*target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if e != nil {
 		return e
 	}
-	e = presentation.Render(html, b)
+	e = draw(html)
 	closeErr := html.Close()
 	if e != nil {
 		return e
