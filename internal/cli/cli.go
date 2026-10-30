@@ -96,7 +96,7 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	graph := f.String("graph", "", "optional source-bound canonical graph")
 	graphHash := f.String("graph-sha256", "", "caller-pinned graph digest")
 	timeout := f.Duration("timeout", 2*time.Minute, "whole search and verification budget")
-	queryTimeout := f.Duration("query-timeout", 10*time.Second, "individual tool budget")
+	queryTimeout := f.Duration("query-timeout", 10*time.Second, "budget shared by the solver and checker of one query")
 	maxPaths := f.Int("max-paths", 1000, "forward path resource limit")
 	maxQueries := f.Int("max-queries", 10000, "solver call resource limit")
 	if e := f.Parse(args); e != nil {

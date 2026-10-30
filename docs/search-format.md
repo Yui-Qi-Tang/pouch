@@ -37,16 +37,23 @@ certificate. A return trace is a model operation trace, not a physical rollback.
 
 ## Tool contract and files
 
-`sat.New` requires explicit executable paths and SHA-256 pins. It copies the
-verified bytes into a new private artifact directory. No historical checker is
-silently selected. The caller provides the tool profile; executable files and
-portable `tools.json` preserve the actual tool identity.
+`sat.New` requires explicit executable paths and SHA-256 pins. It adapts the
+Calx `sat/cadical` runner, which copies the verified bytes into a new private
+artifact directory. No historical checker is silently selected. The caller
+provides the tool profile; executable files and portable `tools.json` preserve
+the actual tool identity, and `limits.json` records the effective limits.
 
 Each query uses a safe generated `qNNNNNN` directory containing the exact
-`input.cnf`, `variables.json`, process stdout/stderr and exit records. SAT adds a
-checked `assignment.json`; UNSAT retains `proof.drat` and checker records.
+`input.cnf`, `input.json`, process stdout/stderr and exit records, and
+`outcome.json`. `input.json` carries each variable's meaning in its
+`pouch_variable` metadata. SAT adds a checked `assignment.json`; UNSAT retains
+`proof.drat` and checker records. Results saved by earlier versions have
+`variables.json` and no `input.json` or `outcome.json`.
 Artifact references are relative IDs with exact byte hashes. Process arguments
 use local relative formula/proof names; tool metadata contains no host paths.
+A query's `error` field in the bundle keeps only a failure category. The full
+message is in that query's `outcome.json`, which can name local paths, so check
+the solver evidence of a failed run before sharing it.
 
 Acceptance requires:
 
@@ -54,6 +61,8 @@ Acceptance requires:
   assignment, and every original clause satisfied.
 - UNSAT: CaDiCaL exit 20, exact `s UNSATISFIABLE`, and DRAT-trim exit 0 plus exact
   `s VERIFIED`. CR and LF are line separators; extra status text is not accepted.
+  The one exception is a formula that already contains an empty clause: DRAT-trim
+  reports `c trivial UNSAT` and `s VERIFIED`, then exits 1, which is accepted.
 
 Proof validity applies to the saved CNF. Independent original-rule replay and
 set comparison remain required to establish correspondence to the authority.
@@ -63,13 +72,17 @@ set comparison remain required to establish correspondence to the authority.
 Default limits are 10,000 solver queries, 1,000 forward paths, 100,000 variables
 and 1,000,000 clauses per formula. The quadratic nonrepetition encoding is
 estimated before allocating time-indexed rows. The runner defaults to 30 seconds
-per tool, 16 MiB per output stream and a 64 MiB proof check limit. The proof size
-limit is checked after solver exit; it is not a filesystem quota.
+per query, shared by the solver and checker, 16 MiB per output stream and a
+64 MiB proof check limit. `solve --query-timeout` sets that shared budget and
+defaults to 10 seconds. Calx also limits each query to 4,000,000 literals and
+16 MiB for each of `input.cnf` and `input.json`. The proof size limit is checked
+after solver exit; it is not a filesystem quota.
 
 At the exact forward path cap, another query is allowed to establish exhaustion.
 If that query finds another path, the preserved set is partial and the call
-returns `ErrPathLimit`. Query/encoding limits, cancellation, malformed tool
-output and proof failures yield `INCONCLUSIVE`, preserving earlier evidence.
+returns `ErrPathLimit`. Query/encoding limits, cancellation, an explicit solver
+`UNKNOWN`, malformed tool output and proof failures yield `INCONCLUSIVE`,
+preserving earlier evidence.
 They are never converted to UNSAT. `forward_complete` may remain true if a later
 return search was interrupted; overall `complete` is false on any error.
 

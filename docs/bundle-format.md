@@ -46,7 +46,7 @@ Recovery is `RETURN_VERIFIED`, `NO_RETURN_IN_MODEL`, or `UNKNOWN`. A bounded ret
 
 - `authority.json`, `sources.json`, `sources/`: frozen query inputs.
 - `evidence-graph.json`, `evidence-matrix.json`: explicitly scoped graph view and incidence projection.
-- `solver/tools/`, `solver/tools.json`, `solver/q*/`: pinned tool bytes, formulas, maps, assignments/proofs and process records.
+- `solver/tools/`, `solver/tools.json`, `solver/limits.json`, `solver/q*/`: pinned tool bytes, effective limits, formulas, maps, assignments/proofs and process records.
 - `packages/`: v1 packages accepted by the original-rule receiver.
 - `closures/` or `forward-closure.json`: full finite reachable states when used to justify impossibility.
 - `bundle.json`, `index.html`: machine and human views.

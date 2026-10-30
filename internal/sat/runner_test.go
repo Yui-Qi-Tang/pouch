@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	calxsat "github.com/Yui-Qi-Tang/calx/sat"
 	"github.com/Yui-Qi-Tang/pouch/internal/planning"
 )
 
@@ -42,7 +44,7 @@ func tinyCNF() planning.CNF {
 	return planning.CNF{Variables: []planning.Variable{{ID: 1, Kind: "state"}}, Clauses: [][]int{{1}}}
 }
 func TestCheckedSATAndArtifactIsolation(t *testing.T) {
-	r := fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v 1 0'; exit 10", "exit 1", time.Second)
+	r := fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v 1 0'; exit 10", "exit 1", 10*time.Second)
 	result, err := r.Solve(context.Background(), "q0", tinyCNF())
 	if err != nil || !result.Verified || result.Status != "SAT" {
 		t.Fatalf("%+v %v", result, err)
@@ -63,12 +65,12 @@ func TestCheckedSATAndArtifactIsolation(t *testing.T) {
 	}
 }
 func TestRejectWrongAssignmentAndCheckerExit(t *testing.T) {
-	r := fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v -1 0'; exit 10", "exit 1", time.Second)
+	r := fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v -1 0'; exit 10", "exit 1", 10*time.Second)
 	result, err := r.Solve(context.Background(), "wrong", tinyCNF())
 	if err == nil || result.Verified {
 		t.Fatal("accepted invalid assignment")
 	}
-	r = fixtureRunner(t, "touch proof.drat; echo 's UNSATISFIABLE'; exit 20", "echo 's VERIFIED'; exit 1", time.Second)
+	r = fixtureRunner(t, "touch proof.drat; echo 's UNSATISFIABLE'; exit 20", "echo 's VERIFIED'; exit 1", 10*time.Second)
 	result, err = r.Solve(context.Background(), "wrong", tinyCNF())
 	if err == nil || result.Verified {
 		t.Fatal("accepted checker VERIFIED with exit 1")
@@ -108,21 +110,28 @@ func TestPinsAndPrivateCopy(t *testing.T) {
 		t.Fatalf("caller edit changed pinned copy: %v", err)
 	}
 }
-func TestAssignmentSyntax(t *testing.T) {
-	for _, s := range []string{"v 1 -1 0\n", "v 2 0\n", "v 1\n", "v 0 1\n", "v true 0\n"} {
-		if _, err := assignment([]byte(s), 1); err == nil {
-			t.Fatalf("accepted %q", s)
-		}
+func TestUnknownAndUnverifiedResultsHaveNoAssignment(t *testing.T) {
+	r := fixtureRunner(t, "echo 's UNKNOWN'; exit 0", "exit 1", 10*time.Second)
+	result, err := r.Solve(context.Background(), "unknown", tinyCNF())
+	if !errors.Is(err, calxsat.ErrInconclusive) || result.Status != "INCONCLUSIVE" || result.Verified || result.Assignment != nil {
+		t.Fatalf("%+v %v", result, err)
+	}
+	r = fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v -1 0'; exit 10", "exit 1", 10*time.Second)
+	result, err = r.Solve(context.Background(), "wrong", tinyCNF())
+	if !errors.Is(err, calxsat.ErrValidation) || result.Status != "SAT" || result.Verified || result.Assignment != nil {
+		t.Fatalf("%+v %v", result, err)
 	}
 }
-
-func TestExactStatusLineHandlesCRWithoutAcceptingWhitespace(t *testing.T) {
-	if !exactLine([]byte("\rc progress\n\rs VERIFIED\n"), "s VERIFIED") {
-		t.Fatal("CR line separators rejected")
+func TestQueryErrorsOmitHostPaths(t *testing.T) {
+	r := fixtureRunner(t, "echo 's UNSATISFIABLE'; exit 20", "exit 1", 10*time.Second)
+	_, err := r.Solve(context.Background(), "no-proof", tinyCNF())
+	if !errors.Is(err, calxsat.ErrProtocol) {
+		t.Fatal(err)
 	}
-	for _, text := range []string{" s VERIFIED\n", "s VERIFIED extra\n", "c s VERIFIED\n"} {
-		if exactLine([]byte(text), "s VERIFIED") {
-			t.Fatalf("accepted %q", text)
-		}
+	if strings.Contains(err.Error(), string(filepath.Separator)) {
+		t.Fatalf("error names a path: %v", err)
+	}
+	if got := portable(fmt.Errorf("query directory must be new: %w", os.ErrExist)); strings.Contains(got.Error(), "file exists") {
+		t.Fatalf("uncategorized cause kept: %v", got)
 	}
 }

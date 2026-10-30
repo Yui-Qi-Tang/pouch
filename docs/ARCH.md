@@ -47,7 +47,7 @@ internal/validation/    Original authority, evaluator, replay, DFS/BFS and recei
 internal/projection/    Provider-neutral canonical graph incidence matrices
 internal/planning/      Declared action matrices, symbolic CNF and bounded search
 internal/candidate/     Finite option compilation, materialization and record binding
-internal/sat/           Pinned external SAT/checker processes and raw artifacts
+internal/sat/           Planning adapter over Calx's pinned SAT/checker runner
 internal/run/           Input bindings, independent certification and bundles
 internal/presentation/  Offline HTML generated from the bundle
 internal/ahe/           Optional public stdio MCP read/review/admission adapter
