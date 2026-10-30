@@ -53,50 +53,59 @@ func ReadInputs(authorityFile, expectedSHA, requestID, sourceManifest string) (I
 	if a.Contract().RequestID != requestID {
 		return in, errors.New("caller request mismatch")
 	}
-	mraw, err := readFile(sourceManifest, validation.MaxBytes)
+	m, contents, err := ReadSources(a.Contract().SourceBinding, expectedSHA, requestID, sourceManifest)
 	if err != nil {
 		return in, err
 	}
+	in = Inputs{Authority: a, AuthorityRaw: raw, Sources: m, Content: contents}
+	return in, nil
+}
+
+// ReadSources checks a source manifest against the digests an authority binds.
+func ReadSources(binding map[string]string, expectedSHA, requestID, sourceManifest string) (SourceManifest, map[string][]byte, error) {
 	var m SourceManifest
-	if err = decodeExact(mraw, &m); err != nil {
-		return in, fmt.Errorf("source manifest: %w", err)
+	mraw, err := readFile(sourceManifest, validation.MaxBytes)
+	if err != nil {
+		return m, nil, err
 	}
-	if m.SchemaVersion != "pouch-sources/v1" || m.AuthoritySHA256 != expectedSHA || m.RequestID != requestID || len(m.Sources) != len(a.SourceIDs()) {
-		return in, errors.New("source manifest binding mismatch")
+	if err = decodeExact(mraw, &m); err != nil {
+		return m, nil, fmt.Errorf("source manifest: %w", err)
+	}
+	if m.SchemaVersion != "pouch-sources/v1" || m.AuthoritySHA256 != expectedSHA || m.RequestID != requestID || len(m.Sources) != len(binding) {
+		return m, nil, errors.New("source manifest binding mismatch")
 	}
 	root, err := os.OpenRoot(filepath.Dir(sourceManifest))
 	if err != nil {
-		return in, err
+		return m, nil, err
 	}
 	defer root.Close()
 	contents := map[string][]byte{}
 	for _, s := range m.Sources {
-		expected, ok := a.SourceDigest(s.ID)
+		expected, ok := binding[s.ID]
 		if !ok || expected != s.SHA256 || contents[s.ID] != nil {
-			return in, errors.New("source identity or digest mismatch")
+			return m, nil, errors.New("source identity or digest mismatch")
 		}
 		if !filepath.IsLocal(s.File) || strings.Contains(s.File, "\\") {
-			return in, errors.New("source file must be a confined relative path")
+			return m, nil, errors.New("source file must be a confined relative path")
 		}
 		f, err := root.Open(s.File)
 		if err != nil {
-			return in, err
+			return m, nil, err
 		}
 		content, readErr := io.ReadAll(io.LimitReader(f, validation.MaxBytes+1))
 		closeErr := f.Close()
 		if readErr != nil {
-			return in, readErr
+			return m, nil, readErr
 		}
 		if closeErr != nil {
-			return in, closeErr
+			return m, nil, closeErr
 		}
 		if len(content) > validation.MaxBytes || validation.Digest(content) != expected {
-			return in, errors.New("source bytes mismatch or bound exceeded")
+			return m, nil, errors.New("source bytes mismatch or bound exceeded")
 		}
 		contents[s.ID] = content
 	}
-	in = Inputs{Authority: a, AuthorityRaw: raw, Sources: m, Content: contents}
-	return in, nil
+	return m, contents, nil
 }
 
 func readFile(path string, limit int) ([]byte, error) {

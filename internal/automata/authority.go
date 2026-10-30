@@ -6,6 +6,7 @@ package automata
 
 import (
 	"encoding/hex"
+	"maps"
 	"slices"
 
 	"github.com/Yui-Qi-Tang/calx/automaton"
@@ -68,8 +69,11 @@ type Contract struct {
 
 // Authority owns a private decoded copy and is immutable after construction.
 type Authority struct {
-	system *system
-	start  automaton.State
+	contract Contract
+	system   *system
+	start    automaton.State
+	baseline automaton.State
+	goal     automaton.Pattern
 }
 
 // NewAuthority verifies the external digest and rejects unsupported models.
@@ -101,7 +105,8 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 	if !ok {
 		return nil, reject("STATE_ENCODING")
 	}
-	if _, ok := decodeBits(c.Baseline, stateBits); !ok {
+	baseline, ok := decodeBits(c.Baseline, stateBits)
+	if !ok {
 		return nil, reject("STATE_ENCODING")
 	}
 	mask, maskOK := decodeBits(c.Goal.Mask, stateBits)
@@ -109,19 +114,26 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 	if !maskOK || !valueOK || !slices.Contains(mask, true) {
 		return nil, reject("GOAL_PATTERN")
 	}
+	goal := automaton.Pattern{}
 	for i := range value {
 		if value[i] && !mask[i] {
 			return nil, reject("GOAL_PATTERN")
 		}
+		if mask[i] {
+			goal[automaton.Bit{Cell: i / s.bits, Index: i % s.bits}] = value[i]
+		}
 	}
-	return &Authority{system: s, start: start}, nil
+	return &Authority{contract: c, system: s, start: start, baseline: baseline, goal: goal}, nil
 }
 
 // System returns the automaton the authority declares.
 func (a *Authority) System() automaton.System { return a.system }
 
-// Start returns an independent copy of the start state.
-func (a *Authority) Start() automaton.State { return slices.Clone(a.start) }
+// RequestID returns the caller-selected identity.
+func (a *Authority) RequestID() string { return a.contract.RequestID }
+
+// SourceBinding returns an independent copy of the bound source digests.
+func (a *Authority) SourceBinding() map[string]string { return maps.Clone(a.contract.SourceBinding) }
 
 func reject(code string) error { return &validation.Rejection{Code: code} }
 

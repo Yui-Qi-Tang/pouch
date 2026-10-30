@@ -47,7 +47,7 @@ internal/validation/    Original authority, evaluator, replay, DFS/BFS and recei
 internal/projection/    Provider-neutral canonical graph incidence matrices
 internal/planning/      Declared action matrices and bounded search over Calx encodings
 internal/candidate/     Finite option compilation, materialization and record binding
-internal/automata/      Synchronous automaton authorities, rule tables and replay
+internal/automata/      Synchronous automaton authorities, search, replay and certification
 internal/sat/           Planning adapter over Calx's pinned SAT/checker runner
 internal/run/           Input bindings, independent certification and bundles
 internal/presentation/  Offline HTML generated from the bundle

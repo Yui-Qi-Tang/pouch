@@ -26,6 +26,11 @@ type Config struct {
 	Timeout        time.Duration
 	MaxOutputBytes int64
 	MaxProofBytes  int64
+	// Zero selects the Calx default for each formula limit.
+	MaxVariables  int
+	MaxClauses    int
+	MaxLiterals   int
+	MaxInputBytes int
 }
 
 // Runner keeps private pinned tool copies and never overwrites query evidence.
@@ -42,7 +47,7 @@ func New(c Config) (*Runner, error) {
 		CheckerPath:   c.CheckerPath,
 		CheckerDigest: digest.Digest(c.CheckerSHA256),
 		ArtifactDir:   c.ArtifactDir,
-		Limits:        calxsat.Limits{Timeout: c.Timeout, MaxOutputBytes: c.MaxOutputBytes},
+		Limits:        calxsat.Limits{Timeout: c.Timeout, MaxOutputBytes: c.MaxOutputBytes, MaxVariables: c.MaxVariables, MaxClauses: c.MaxClauses, MaxLiterals: c.MaxLiterals, MaxInputBytes: c.MaxInputBytes},
 		MaxProofBytes: c.MaxProofBytes,
 	})
 	if err != nil {

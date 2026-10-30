@@ -1,0 +1,154 @@
+package automata
+
+import (
+	"context"
+	"errors"
+	"slices"
+
+	"github.com/Yui-Qi-Tang/calx/automaton"
+	"github.com/Yui-Qi-Tang/pouch/internal/run"
+)
+
+// Bundle records a search and its checks against the authority's rule tables.
+// Its status is a certification outcome, distinct from Search.Status.
+type Bundle struct {
+	SchemaVersion   string `json:"schema_version"`
+	ProjectVersion  string `json:"project_version"`
+	RequestID       string `json:"request_id"`
+	AuthoritySHA256 string `json:"authority_sha256"`
+	// FOUND, NO_PATH_WITHIN_BOUND, NO_PATH_IN_MODEL, INCONCLUSIVE, or REJECTED.
+	Status string `json:"status"`
+	// Search and forward and recovery certification finished.
+	Complete bool `json:"complete"`
+	// model_conditional_conclusion.
+	ConclusionKind  string             `json:"conclusion_kind"`
+	ObservedFact    bool               `json:"observed_fact"`
+	Sources         run.SourceManifest `json:"sources"`
+	Search          Result             `json:"search"`
+	ForwardVerified bool               `json:"forward_verified"`
+	// RETURN_VERIFIED, NO_RETURN_IN_MODEL, or UNKNOWN.
+	RecoveryStatus string `json:"recovery_status"`
+	// Steps from the endpoint to the baseline, when a run established them. It
+	// can exceed the return limit; see Reason.
+	ReturnSteps *int `json:"return_steps"`
+	// Unknown-recovery explanation.
+	Reason      string   `json:"reason,omitempty"`
+	Diagnostics []string `json:"diagnostics"`
+}
+
+// Certify checks the search result against the rule tables, without the CNF. For
+// a choice-free system it also walks the only run, which independently confirms
+// every UNSAT answer the shortest claims depend on, and can prove there is no
+// return when the run closes without reaching the baseline.
+func Certify(ctx context.Context, a *Authority, digest string, sources run.SourceManifest, result Result) (Bundle, error) {
+	b := Bundle{SchemaVersion: "pouch-automaton-bundle/v1", ProjectVersion: "0.1.0-dev", RequestID: a.RequestID(), AuthoritySHA256: digest, Status: "INCONCLUSIVE", ConclusionKind: "model_conditional_conclusion", Sources: sources, Search: result, RecoveryStatus: "UNKNOWN", Diagnostics: []string{}}
+	refuse := func(err error) (Bundle, error) {
+		b.Status = "REJECTED"
+		return b, err
+	}
+	meets := func(state automaton.State) bool {
+		for bit, value := range a.goal {
+			if state[bit.Cell*a.system.bits+bit.Index] != value {
+				return false
+			}
+		}
+		return true
+	}
+	limit := result.Options.MaxOrbitSteps
+	if result.Forward == nil {
+		if !result.ForwardComplete {
+			b.Diagnostics = append(b.Diagnostics, "RUN_NOT_FULLY_VERIFIED")
+			return b, nil
+		}
+		b.Status = "NO_PATH_WITHIN_BOUND"
+		if !result.Deterministic {
+			b.Complete = result.Complete
+			return b, nil
+		}
+		hit, closed, err := a.system.walk(ctx, a.start, meets, limit)
+		switch {
+		case err != nil:
+			b.Status = "INCONCLUSIVE"
+			return b, err
+		case hit >= 0 && hit <= result.ForwardLimit:
+			return refuse(errors.New("false forward exhaustion"))
+		case closed:
+			b.Status = "NO_PATH_IN_MODEL"
+		}
+		b.Complete = result.Complete
+		return b, nil
+	}
+	forward, err := a.decodeTrace(*result.Forward)
+	if err != nil {
+		return refuse(err)
+	}
+	if err := a.Replay(forward); err != nil {
+		return refuse(err)
+	}
+	endpoint := forward.States[len(forward.States)-1]
+	if !slices.Equal(forward.States[0], a.start) || !meets(endpoint) {
+		return refuse(errors.New("forward run misses start or goal"))
+	}
+	if result.Deterministic {
+		hit, _, err := a.system.walk(ctx, a.start, meets, len(forward.Choices))
+		if err != nil {
+			return b, err
+		}
+		if hit != len(forward.Choices) {
+			return refuse(errors.New("false shortest forward claim"))
+		}
+	}
+	b.ForwardVerified = true
+	b.Status = "FOUND"
+	reached := func(state automaton.State) bool { return slices.Equal(state, a.baseline) }
+	switch {
+	case result.Return == nil || result.Return.Status == "UNKNOWN":
+		b.Reason = "RETURN_SEARCH_INCOMPLETE"
+	case result.Return.Status == "RETURN_FOUND":
+		if result.Return.Trace == nil {
+			return refuse(errors.New("return witness missing"))
+		}
+		back, err := a.decodeTrace(*result.Return.Trace)
+		if err != nil {
+			return refuse(err)
+		}
+		if err := a.Replay(back); err != nil {
+			return refuse(err)
+		}
+		if !slices.Equal(back.States[0], endpoint) || !reached(back.States[len(back.States)-1]) {
+			return refuse(errors.New("return run misses endpoint or baseline"))
+		}
+		cost := len(back.Choices)
+		if result.Deterministic {
+			hit, _, err := a.system.walk(ctx, endpoint, reached, cost)
+			if err != nil {
+				return b, err
+			}
+			if hit != cost {
+				return refuse(errors.New("false shortest return claim"))
+			}
+		}
+		b.RecoveryStatus, b.ReturnSteps = "RETURN_VERIFIED", &cost
+	case !result.Deterministic:
+		b.Reason = "CHOICES_NOT_ENUMERATED"
+	default:
+		hit, closed, err := a.system.walk(ctx, endpoint, reached, limit)
+		switch {
+		case err != nil:
+			return b, err
+		case hit >= 0 && hit <= result.ReturnLimit:
+			return refuse(errors.New("false return exhaustion"))
+		case hit >= 0:
+			b.ReturnSteps, b.Reason = &hit, "RETURN_EXISTS_BEYOND_SEARCH_BOUND"
+		case closed:
+			b.RecoveryStatus = "NO_RETURN_IN_MODEL"
+		default:
+			b.Reason = "ORBIT_NOT_CLOSED"
+		}
+	}
+	b.Complete = result.Complete && b.RecoveryStatus != "UNKNOWN"
+	if !b.Complete {
+		b.Diagnostics = append(b.Diagnostics, "RUN_NOT_FULLY_VERIFIED")
+	}
+	return b, nil
+}

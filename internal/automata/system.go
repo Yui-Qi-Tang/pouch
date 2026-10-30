@@ -1,6 +1,7 @@
 package automata
 
 import (
+	"context"
 	"slices"
 
 	"github.com/Yui-Qi-Tang/calx/automaton"
@@ -117,4 +118,31 @@ func (s *system) step(state automaton.State, choices []bool) automaton.State {
 		copy(next[c*s.bits:(c+1)*s.bits], cell.rule.output[row*s.bits:])
 	}
 	return next
+}
+
+// walk follows the only run of a choice-free system. It returns the first step
+// at which reached holds, or -1. closed reports that the run has repeated, so no
+// later step can differ. Cycle detection keeps one saved state (Brent), because
+// a run can be far longer than memory allows.
+func (s *system) walk(ctx context.Context, state automaton.State, reached func(automaton.State) bool, limit int) (hit int, closed bool, err error) {
+	saved, power, length := state, 1, 0
+	for step := 0; ; step++ {
+		if reached(state) {
+			return step, false, nil
+		}
+		if step == limit {
+			return -1, false, nil
+		}
+		if err := ctx.Err(); err != nil {
+			return -1, false, err
+		}
+		state = s.step(state, nil)
+		length++
+		if slices.Equal(state, saved) {
+			return -1, true, nil
+		}
+		if length == power {
+			saved, power, length = state, power*2, 0
+		}
+	}
 }

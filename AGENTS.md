@@ -9,7 +9,7 @@ Pouch is a standalone Go planner: evidence plus an explicit finite model become 
 - `docs/ARCH.md` and `docs/THEORY.md`: architecture and model semantics.
 - `docs/bundle-format.md` and `docs/search-format.md`: exact inputs, outputs, search and tool contracts.
 - `internal/candidate/README.md`: finite options, templates, materialization and runtime-record binding.
-- `internal/automata/README.md`: synchronous automaton authorities, rule tables and replay.
+- `internal/automata/README.md`: synchronous automaton authorities, search and certification.
 - `.claude/skills/pouch/references/workflow.md`: using the CLI to solve, inspect or validate a planning task.
 
 Read only what the task needs. Check the branch, HEAD and working tree before changes; preserve unrelated edits. Prefer code-graph discovery if available, validate its coverage, and read the current source when coverage is stale or incomplete. Do not assume a graph service or a particular local skill installation exists.

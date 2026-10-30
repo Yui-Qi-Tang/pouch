@@ -5,8 +5,9 @@ automata, such as lattice gases. All cells update at once, from the previous
 state of their inputs. This differs from `pouch-finite-validation/v1`, where one
 declared action runs at each step. The two formats and their limits are separate.
 
-The package validates authorities and replays recorded runs. It does not search:
-it invokes no solver, and no `solve` command accepts this schema yet.
+The package validates authorities, searches them through pinned solver tools and
+checks the results against the rule tables. Use `pouch solve-automaton`; `pouch
+solve` does not accept this schema. Reports are JSON only for now.
 
 ## Authority
 
@@ -74,3 +75,66 @@ cannot alter what it means.
 
 Tests compare these tables with `lga.Run`, Calx's separate bit-packed simulator,
 and compare their CNF encoding digests with those of the `lga` types.
+
+## Search
+
+`pouch solve-automaton` takes the inputs of `pouch solve`, without graph or AHE
+options, and writes `authority.json`, `sources.json`, `sources/`, `solver/`,
+`bundle.json` and `manifest.json` to a new directory.
+
+The policy is `shortest-run/synchronous-boolean/v2`. For each length from 0 to the
+limit, one query asks for a run of exactly that length from the start to the goal.
+The first SAT answer is the shortest run. It is also a first hit, because an
+earlier hit would be a shorter run. A separate search then looks for the shortest
+run from that endpoint to the baseline. The return uses the same rule, so it is
+not the forward run reversed: on a reversible lattice it continues around the
+cycle.
+
+This differs from `simple-first-hit/action-sequence`. Choice-free systems have one
+run, so `deterministic` is true and that run is the whole path set. With choices,
+`forward` is one shortest witness; other paths are not enumerated.
+
+| Option | Meaning | Default |
+|---|---|---:|
+| `--max-queries` | Solver calls across both searches | 10,000 |
+| `--max-variables` | Variables per formula | 100,000 |
+| `--max-clauses` | Clauses per formula | 1,000,000 |
+| `--max-literals` | Literals per formula | 4,000,000 |
+| `--max-input-bytes` | Bytes of each of `input.cnf` and `input.json` | 16 MiB |
+| `--max-orbit-steps` | Steps walked to confirm a choice-free run | 100,000 |
+
+Raising these changes what can be attempted, not what a result means. Exceeding one
+gives `INCONCLUSIVE`, never UNSAT. These budgets are separate from the 4,096-state
+and 64-action limits of the finite format, which do not apply here. Queries for
+every shorter length are repeated in full, so total cost grows with the square of
+the limit: a 4×4 return of 206 steps took 218 queries and about 29 seconds.
+
+## Certification
+
+`bundle.json` has schema `pouch-automaton-bundle/v1`. Its `status` is `FOUND`,
+`NO_PATH_WITHIN_BOUND`, `NO_PATH_IN_MODEL`, `INCONCLUSIVE` or `REJECTED`. Forward
+existence and `recovery_status` are separate.
+
+Every returned run is replayed from the tables. For a choice-free system,
+`Certify` also walks the only run step by step, which checks the solver's UNSAT
+answers by a separate method and rejects a false shortest or exhausted claim. It
+keeps one saved state to detect a repeat, so it can follow runs far longer than
+memory could list.
+
+| `recovery_status` | `reason` | Meaning |
+|---|---|---|
+| `RETURN_VERIFIED` | | A replayed return exists; `return_steps` is its length. |
+| `NO_RETURN_IN_MODEL` | | The run closed without reaching the baseline. |
+| `UNKNOWN` | `RETURN_EXISTS_BEYOND_SEARCH_BOUND` | The walk reached the baseline after `return_steps`, past the return limit. |
+| `UNKNOWN` | `ORBIT_NOT_CLOSED` | The walk stopped at its limit. A return may or may not exist. |
+| `UNKNOWN` | `CHOICES_NOT_ENUMERATED` | No return was found within the limit, and other runs were not ruled out. |
+| `UNKNOWN` | `RETURN_SEARCH_INCOMPLETE` | The return search did not finish. |
+
+`complete` is true only when recovery is settled, and the exit code follows `solve`:
+0 for complete, 1 for rejected, 2 otherwise. An `UNKNOWN` recovery therefore exits
+with 2, even when the forward run is verified. Random lattices of 6×6 and larger
+are usually in this state: each of 15 sampled states took more than 200,000 steps
+to come back.
+
+There is no `verify` command for these results yet. Rendering them as HTML is also
+not available yet.
