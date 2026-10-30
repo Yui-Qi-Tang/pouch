@@ -5,7 +5,7 @@ Pouch is a standalone Go planner: evidence plus an explicit finite model become 
 ## Start with the relevant contract
 
 - `README.md`: product purpose and AI usage.
-- `docs/STATUS.md`: current implementation and the limits of completed acceptance.
+- `docs/EVALUATION.md`: measured results and the limits of completed acceptance. A checkout may also have a local, ignored `docs/STATUS.md` with its current status.
 - `docs/ARCH.md` and `docs/THEORY.md`: architecture and model semantics.
 - `docs/bundle-format.md` and `docs/search-format.md`: exact inputs, outputs, search and tool contracts.
 - `internal/candidate/README.md`: finite options, templates, materialization and runtime-record binding.

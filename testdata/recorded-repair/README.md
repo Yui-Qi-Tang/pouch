@@ -4,4 +4,4 @@ This is a selected subset of `artifacts/go-repair-20260929-01` from Git checkpoi
 
 The default `TestRepairPublicationBindings` uses this subset to verify all six packages, the complete forward set, 36 recorded events, source/checkpoint identities, file hashes/modes, frame conditions, return completeness and targeted rejection cases. It does not rerun SAT, execute these recorded patches or access AHE.
 
-The opt-in native repair test continues to check the full original 205-entry run inventory, restored separately as described in [the archive guide](../../docs/artifacts.md). No raw historical evidence is rewritten by this extraction. The historical official-test control mismatch is not erased by successful file restoration; see the [current verification scope](../../docs/STATUS.md).
+The opt-in native repair test continues to check the full original 205-entry run inventory, restored separately as described in [the archive guide](../../docs/artifacts.md). No raw historical evidence is rewritten by this extraction. The historical official-test control mismatch is not erased by successful file restoration.

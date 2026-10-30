@@ -14,7 +14,6 @@ import (
 	"time"
 
 	calxsat "github.com/Yui-Qi-Tang/calx/sat"
-	"github.com/Yui-Qi-Tang/pouch/internal/planning"
 )
 
 func pinnedScript(t *testing.T, body string) (string, string) {
@@ -40,8 +39,8 @@ func fixtureRunner(t *testing.T, solverBody, checkerBody string, timeout time.Du
 	}
 	return r
 }
-func tinyCNF() planning.CNF {
-	return planning.CNF{Variables: []planning.Variable{{ID: 1, Kind: "state"}}, Clauses: [][]int{{1}}}
+func tinyCNF() calxsat.CNF {
+	return calxsat.CNF{Variables: []calxsat.Variable{{ID: 1}}, Clauses: [][]int{{1}}}
 }
 func TestCheckedSATAndArtifactIsolation(t *testing.T) {
 	r := fixtureRunner(t, "echo 's SATISFIABLE'; echo 'v 1 0'; exit 10", "exit 1", 10*time.Second)

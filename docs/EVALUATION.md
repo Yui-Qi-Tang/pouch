@@ -299,5 +299,5 @@ and the final binary SHA-256
 The curated tables were checked against these saved JSON records and the H30/H31
 reports when preparing this page. No solver, checker, container or native
 admission was rerun for this documentation update. For current feature
-boundaries see [Project status](STATUS.md); for optional evidence retrieval see
+boundaries see the [architecture](ARCH.md); for optional evidence retrieval see
 [archive handling](artifacts.md).

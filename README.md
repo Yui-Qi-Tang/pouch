@@ -82,7 +82,7 @@ repairs. Pouch can also work without AHE.
 
 ## Build and use
 
-Requires Go **1.27.3**. The Go module uses the standard library plus [Calx](https://github.com/Yui-Qi-Tang/calx) for checked SAT execution. SAT search additionally requires caller-supplied CaDiCaL and DRAT-trim executables pinned by SHA-256; standalone model validation does not.
+Requires Go **1.27.3**. The Go module uses the standard library plus [Calx](https://github.com/Yui-Qi-Tang/calx) for CNF encoding and checked SAT execution. SAT search additionally requires caller-supplied CaDiCaL and DRAT-trim executables pinned by SHA-256; standalone model validation does not.
 
 ```sh
 go build -o bin/pouch ./cmd/pouch
@@ -152,7 +152,6 @@ The project includes [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md), and the [Po
 - [Architecture and specification](docs/ARCH.md)
 - [Theory: representation, search, replay and recovery](docs/THEORY.md)
 - [Experimental results: combinations, repair and recovery](docs/EVALUATION.md)
-- [Current capabilities and verification scope](docs/STATUS.md)
 - [Candidate options, patch materialization and runtime-record binding](internal/candidate/README.md)
 - [Report output and optional test archives](docs/artifacts.md)
 

@@ -237,8 +237,8 @@ native stages unless explicitly configured. Fixture approvals are labelled
 These opt-in tests exercise actual MCP processes and a disposable PostgreSQL
 store. Their bounded results do not establish original-problem coverage,
 lifecycle currentness, official SWE runtime behavior or physical restoration.
-Detailed per-run reports are local ignored output; [project status](STATUS.md)
-records the current verification scope.
+Detailed per-run reports are local ignored output; the
+[experimental evaluation](EVALUATION.md) records the measured scope.
 
 ## Optional recorded file-repair test
 

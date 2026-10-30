@@ -18,8 +18,9 @@ the matrix alone is not the complete problem.
 Each exact-length formula has one-hot state values at every step and one-hot
 action choices at every transition. It includes the complete initial state,
 domain exclusions, final Goal, guard/effect/frame implications, no earlier Goal,
-and pairwise nonrepetition of complete states. The encoder consumes the operation
-matrix and the declared domain/query, never a reference transition table.
+and pairwise nonrepetition of complete states. Calx `finite.Compile` encodes it
+from the operation matrix and the declared domain/query, never a reference
+transition table.
 
 Forward search blocks complete action sequences after each SAT model. Helpers
 and state variables do not define path identity: two distinct declared action
@@ -46,7 +47,7 @@ the actual tool identity, and `limits.json` records the effective limits.
 Each query uses a safe generated `qNNNNNN` directory containing the exact
 `input.cnf`, `input.json`, process stdout/stderr and exit records, and
 `outcome.json`. `input.json` carries each variable's meaning in its
-`pouch_variable` metadata. SAT adds a checked `assignment.json`; UNSAT retains
+`finite_variable` metadata. SAT adds a checked `assignment.json`; UNSAT retains
 `proof.drat` and checker records. Results saved by earlier versions have
 `variables.json` and no `input.json` or `outcome.json`.
 Artifact references are relative IDs with exact byte hashes. Process arguments

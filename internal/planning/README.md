@@ -1,7 +1,8 @@
 # Planning fields and values
 
-This package compiles an explicit finite model into an operation matrix and CNF,
-then searches it through the caller-supplied `Solver`. It does not read AHE,
+This package projects an explicit finite model into an operation matrix, compiles
+each query with Calx `finite`, then searches through the caller-supplied `Solver`.
+Replay against the original rules stays in `validation`. It does not read AHE,
 invent actions, execute a repair, or issue the final original-rule receipt.
 
 Definitions below describe the current implementation. String values are still
@@ -146,22 +147,26 @@ zero is **not** a requirement that the field be false. Example: an action that
 requires `mode=old` and assigns `mode=new` has Guard 1 at `(mode,old)`, Effect 1
 at `(mode,new)`, and Frame 0 for `mode`.
 
-`CNF.Variables` maps contiguous DIMACS IDs 1…N to meanings; `Clauses` is a
-conjunction of disjunctions of signed IDs. Positive means true, negative means
-false. Literal 0 is not stored; WriteDIMACS adds it as a clause terminator.
-An empty clause is unsatisfiable; an empty clause list is trivially satisfied.
+`Solver` receives a Calx `sat.CNF` from `finite.Compile`, which fixes the query
+semantics as `categorical-simple-first-hit/v1`. Its `Variables` map contiguous
+DIMACS IDs 1…N to meanings; `Clauses` is a conjunction of disjunctions of signed
+IDs. Positive means true, negative means false. Literal 0 is not stored; it is
+added as a clause terminator when writing DIMACS. An empty clause is
+unsatisfiable; an empty clause list is trivially satisfied.
 
-| `Variable.Kind` | Meaning of true | Fields used |
+Each variable's `finite_variable` metadata is a JSON object:
+
+| `kind` | Meaning of true | Keys used |
 |---|---|---|
-| `state` | Field has Value at Time | `Time` 0…horizon, `Field`, `Value` |
-| `action` | Action is chosen for Time → Time+1 | `Time` 0…horizon-1, `Action` |
-| `different` | Auxiliary witness requiring Field to differ at two times | `Time < OtherTime`, `Field` |
+| `state` | Field has Value at Time | `time` 0…horizon, `field`, `value` |
+| `action` | Action is chosen for Time → Time+1 | `time` 0…horizon-1, `action` |
+| `different` | Auxiliary witness requiring Field to differ at two times | `time < other_time`, `field` |
 
-Every Variable also has its positive `ID`. Unused strings are empty/omitted;
-`OtherTime` is omitted outside `different`. `Time=0` is a real initial index.
+Every object also has its positive `id`. Unused strings are omitted;
+`other_time` is omitted outside `different`. `time=0` is a real initial index.
 A false `different` helper does **not** assert equality: it is only a one-way
 witness used to ensure at least one field differs. Do not treat helper values
 as physical state or path identity.
 
-Implementation: [matrix.go](matrix.go), [cnf.go](cnf.go), [search.go](search.go).
+Implementation: [matrix.go](matrix.go), [search.go](search.go).
 Tool acceptance rules: [search-format.md](../../docs/search-format.md).

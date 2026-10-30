@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Yui-Qi-Tang/calx/finite"
+	"github.com/Yui-Qi-Tang/calx/sat"
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
@@ -25,7 +27,7 @@ func twoBits() validation.Contract {
 // external pinned solvers and never this recursive propositional evaluator.
 type truthSolver struct{}
 
-func (truthSolver) Solve(_ context.Context, _ string, c CNF) (SolveResult, error) {
+func (truthSolver) Solve(_ context.Context, _ string, c sat.CNF) (SolveResult, error) {
 	values, ok := solveTruth(c.Clauses, make(map[int]bool), len(c.Variables))
 	if !ok {
 		return SolveResult{Status: "UNSAT", Verified: true}, nil
@@ -159,12 +161,8 @@ func TestLimitsAndCancellationRemainIncomplete(t *testing.T) {
 		t.Fatalf("cancel: %+v %v", r, err)
 	}
 	c := twoBits()
-	m, err := Project(c)
-	if err != nil {
-		t.Fatal(err)
-	}
 	opts, _ := Options{}.defaults()
-	_, err = encode(context.Background(), m, c.Model.Forbidden, c.Start, c.Goal, 4095, nil, opts)
+	_, err = encode(context.Background(), finiteModel(c.Model), c.Start, c.Goal, 4095, nil, opts)
 	if !errors.Is(err, ErrEncodingLimit) {
 		t.Fatalf("large encoding must be rejected before allocation: %v", err)
 	}
@@ -193,29 +191,40 @@ func TestMatrixRoundTripAndStableOrdering(t *testing.T) {
 func TestOneStepMatchesOriginalTruthTable(t *testing.T) {
 	c := twoBits()
 	c.Model.Forbidden = []validation.State{{"a": "1", "b": "1"}}
-	m, err := Project(c)
-	if err != nil {
-		t.Fatal(err)
-	}
+	model := finiteModel(c.Model)
 	opts, _ := Options{}.defaults()
 	states := []validation.State{{"a": "0", "b": "0"}, {"a": "0", "b": "1"}, {"a": "1", "b": "0"}, {"a": "1", "b": "1"}}
 	for _, start := range states {
 		for _, end := range states {
 			for _, action := range c.Model.Actions {
-				e, err := encode(context.Background(), m, c.Model.Forbidden, start, end, 1, nil, opts)
+				e, err := encode(context.Background(), model, start, end, 1, nil, opts)
+				if start["a"] == "1" && start["b"] == "1" {
+					if !errors.Is(err, finite.ErrInput) {
+						t.Fatalf("forbidden start accepted: %v", err)
+					}
+					continue
+				}
 				if err != nil {
 					t.Fatal(err)
 				}
-				for i, id := range m.ActionIDs {
-					if id == action.ID {
-						e.Clauses = append(e.Clauses, []int{e.actions[0][i]})
+				cnf, err := e.CNF()
+				if err != nil {
+					t.Fatal(err)
+				}
+				variables, err := e.Variables()
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, v := range variables {
+					if v.Kind == finite.ActionVariable && string(v.Action) == action.ID {
+						cnf.Clauses = append(cnf.Clauses, []int{v.ID})
 					}
 				}
-				result, err := truthSolver{}.Solve(context.Background(), "", e.CNF)
+				result, err := truthSolver{}.Solve(context.Background(), "", cnf)
 				if err != nil {
 					t.Fatal(err)
 				}
-				valid := !(start["a"] == "1" && start["b"] == "1") && !(end["a"] == "1" && end["b"] == "1") && !maps.Equal(start, end)
+				valid := !(end["a"] == "1" && end["b"] == "1") && !maps.Equal(start, end)
 				next := maps.Clone(start)
 				for f, v := range action.Guard {
 					valid = valid && start[f] == v

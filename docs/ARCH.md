@@ -45,7 +45,7 @@ cmd/pouch/               Local commands and explicit optional AHE commands
 cmd/pouch-validate/      Preserved standalone v1 validator CLI
 internal/validation/    Original authority, evaluator, replay, DFS/BFS and receipts
 internal/projection/    Provider-neutral canonical graph incidence matrices
-internal/planning/      Declared action matrices, symbolic CNF and bounded search
+internal/planning/      Declared action matrices and bounded search over Calx encodings
 internal/candidate/     Finite option compilation, materialization and record binding
 internal/sat/           Planning adapter over Calx's pinned SAT/checker runner
 internal/run/           Input bindings, independent certification and bundles
@@ -157,7 +157,7 @@ A lost response must be recorded as delivery unknown. First query the original r
 
 ### 4.3 Acceptance status after separation
 
-The adapter is implemented using public MCP profiles. It checks exact schema pins, preserves raw responses, validates locally before preparing a result, and requires an external approval tied to the native display, subject and package hash. See [adapter details](ahe-adapter.md) and [current verification scope](STATUS.md). Historical integration through a dedicated internal API is not counted as acceptance of this new boundary.
+The adapter is implemented using public MCP profiles. It checks exact schema pins, preserves raw responses, validates locally before preparing a result, and requires an external approval tied to the native display, subject and package hash. See [adapter details](ahe-adapter.md). Historical integration through a dedicated internal API is not counted as acceptance of this new boundary.
 
 The current v1 `source_binding` pins canonical node IDs and exact UTF-8 `statement_text` digests. It does not bind every AHE lifecycle/provenance field or prove a globally atomic currentness cut. Supplemental record reads and a bounded graph snapshot remain separately identified.
 
@@ -232,7 +232,7 @@ the product specification.
 
 ## 11. Verification scope and change obligations
 
-[STATUS](STATUS.md) records completed verification, including the known-answer
+[EVALUATION](EVALUATION.md) records completed verification, including the known-answer
 SWE migration regression and separate fixed-model native integration. Detailed
 experiments remain local evidence. Keep these obligations when extending the
 product:

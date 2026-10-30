@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Yui-Qi-Tang/calx/finite"
+	"github.com/Yui-Qi-Tang/calx/sat"
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
@@ -38,7 +40,7 @@ type SolveResult struct {
 
 // Solver is supplied by the application; the planner never selects executables.
 type Solver interface {
-	Solve(context.Context, string, CNF) (SolveResult, error)
+	Solve(context.Context, string, sat.CNF) (SolveResult, error)
 }
 
 // Options caps work without changing the declared query or claiming exhaustion.
@@ -168,19 +170,24 @@ func Search(ctx context.Context, c validation.Contract, solver Solver, options O
 		return result, err
 	}
 	result.Matrix = matrix
-	solve := func(direction string, h int, blocked [][]string, start, goal validation.State) (encoding, SolveResult, string, error) {
+	model := finiteModel(c.Model)
+	solve := func(direction string, h int, blocked [][]string, start, goal validation.State) (*finite.Encoding, SolveResult, string, error) {
 		if err := ctx.Err(); err != nil {
-			return encoding{}, SolveResult{}, "", err
+			return nil, SolveResult{}, "", err
 		}
 		if len(result.Queries) >= opts.MaxQueries {
-			return encoding{}, SolveResult{}, "", ErrQueryLimit
+			return nil, SolveResult{}, "", ErrQueryLimit
 		}
-		enc, err := encode(ctx, matrix, c.Model.Forbidden, start, goal, h, blocked, opts)
+		enc, err := encode(ctx, model, start, goal, h, blocked, opts)
 		if err != nil {
-			return encoding{}, SolveResult{}, "", err
+			return nil, SolveResult{}, "", err
+		}
+		formula, err := enc.CNF()
+		if err != nil {
+			return nil, SolveResult{}, "", err
 		}
 		id := fmt.Sprintf("q%06d", len(result.Queries))
-		response, err := solver.Solve(ctx, id, enc.CNF)
+		response, err := solver.Solve(ctx, id, formula)
 		q := Query{ID: id, Direction: direction, Horizon: h, Status: response.Status, Verified: response.Verified, Artifacts: response.Artifacts}
 		if err != nil {
 			q.Error = err.Error()
@@ -205,7 +212,7 @@ func Search(ctx context.Context, c validation.Contract, solver Solver, options O
 			if response.Status == "UNSAT" {
 				break
 			}
-			trace, decodeErr := enc.trace(response.Assignment)
+			trace, decodeErr := decode(enc, response.Assignment)
 			if decodeErr != nil {
 				return result, decodeErr
 			}
@@ -245,7 +252,7 @@ func Search(ctx context.Context, c validation.Contract, solver Solver, options O
 				return result, solveErr
 			}
 			if response.Status == "SAT" {
-				trace, decodeErr := enc.trace(response.Assignment)
+				trace, decodeErr := decode(enc, response.Assignment)
 				if decodeErr != nil {
 					return result, decodeErr
 				}
@@ -267,4 +274,37 @@ func Search(ctx context.Context, c validation.Contract, solver Solver, options O
 		result.Status = "NO_PATH_WITHIN_BOUND"
 	}
 	return result, nil
+}
+
+func finiteModel(m validation.Model) finite.Model {
+	out := finite.Model{Fields: m.Fields, Forbidden: make([]finite.State, len(m.Forbidden)), Actions: make([]finite.Action, len(m.Actions))}
+	for i, pattern := range m.Forbidden {
+		out.Forbidden[i] = finite.State(pattern)
+	}
+	for i, a := range m.Actions {
+		out.Actions[i] = finite.Action{ID: a.ID, Guard: finite.State(a.Guard), Effect: finite.State(a.Effect), Frame: a.Frame}
+	}
+	return out
+}
+
+func encode(ctx context.Context, model finite.Model, start, goal validation.State, horizon int, blocked [][]string, opts Options) (*finite.Encoding, error) {
+	enc, err := finite.Compile(ctx, model, finite.Query{Start: finite.State(start), Goal: finite.State(goal), Horizon: horizon, Blocked: blocked}, finite.WithMaxVariables(opts.MaxVariables), finite.WithMaxClauses(opts.MaxClauses))
+	if errors.Is(err, finite.ErrEncodingLimit) {
+		return nil, ErrEncodingLimit
+	}
+	return enc, err
+}
+
+// decode reads the witness of a checked assignment. Replay against the original
+// rules stays in the validation package, so it does not share this encoder.
+func decode(e *finite.Encoding, values map[int]bool) (validation.Trace, error) {
+	witness, err := e.Decode(values)
+	if err != nil {
+		return validation.Trace{}, err
+	}
+	trace := validation.Trace{States: make([]validation.State, len(witness.States)), Actions: witness.Actions}
+	for i, state := range witness.States {
+		trace.States[i] = validation.State(state)
+	}
+	return trace, nil
 }

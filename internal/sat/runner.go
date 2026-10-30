@@ -5,9 +5,7 @@ package sat
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/Yui-Qi-Tang/calx/digest"
@@ -56,13 +54,9 @@ func New(c Config) (*Runner, error) {
 // Solve preserves the formula, proof, process logs and assignment before
 // reporting verification. The assignment is returned only after both checks
 // pass, because Calx also reports one that failed the model check.
-func (r *Runner) Solve(ctx context.Context, id string, cnf planning.CNF) (planning.SolveResult, error) {
+func (r *Runner) Solve(ctx context.Context, id string, cnf calxsat.CNF) (planning.SolveResult, error) {
 	result := planning.SolveResult{Status: "INCONCLUSIVE", Artifacts: []planning.Artifact{}}
-	input, err := formula(cnf)
-	if err != nil {
-		return result, err
-	}
-	solved, err := r.tools.Solve(ctx, id, input)
+	solved, err := r.tools.Solve(ctx, id, cnf)
 	for _, a := range solved.Artifacts {
 		result.Artifacts = append(result.Artifacts, planning.Artifact{ID: a.ID, SHA256: a.Digest.String(), Bytes: a.Bytes})
 	}
@@ -78,18 +72,6 @@ func (r *Runner) Solve(ctx context.Context, id string, cnf planning.CNF) (planni
 	result.Assignment = solved.Assignment
 	result.Verified = true
 	return result, nil
-}
-
-func formula(cnf planning.CNF) (calxsat.CNF, error) {
-	input := calxsat.CNF{Variables: make([]calxsat.Variable, len(cnf.Variables)), Clauses: cnf.Clauses}
-	for i, v := range cnf.Variables {
-		raw, err := json.Marshal(v)
-		if err != nil {
-			return calxsat.CNF{}, fmt.Errorf("encoding variable: %w", err)
-		}
-		input.Variables[i] = calxsat.Variable{ID: v.ID, Metadata: map[string]string{"pouch_variable": string(raw)}}
-	}
-	return input, nil
 }
 
 // portable reduces a Calx error to its category. Its messages can name host
