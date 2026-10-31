@@ -61,6 +61,11 @@ func TestRenderContainsExactBundleAndReplayControls(t *testing.T) {
 			t.Errorf("missing UI control %s", id)
 		}
 	}
+	for _, id := range []string{"guard", "effect", "frame"} {
+		if !strings.Contains(output.String(), `id="`+id+`" class="scroll matrix"`) {
+			t.Errorf("matrix %s lost its readable layout", id)
+		}
+	}
 	if strings.Contains(output.String(), "__POUCH_BUNDLE_JSON__") {
 		t.Fatal("unresolved template placeholder")
 	}
