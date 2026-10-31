@@ -7,9 +7,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/ahe"
+	"github.com/Yui-Qi-Tang/pouch/internal/run"
+	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
 func TestPublicationStatusKeepsWriteBoundary(t *testing.T) {
@@ -60,5 +64,51 @@ func TestExternalApprovalRejectsAmbiguousKeys(t *testing.T) {
 	}
 	if err := uniqueConfigKeys([]byte(`{"subject":"x","nested":{"a":[1,2]}}`)); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func pinnedTool(t *testing.T, body string) (string, string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell process fixture requires POSIX")
+	}
+	path := filepath.Join(t.TempDir(), "tool")
+	raw := []byte("#!/bin/sh\n" + body + "\n")
+	if err := os.WriteFile(path, raw, 0700); err != nil {
+		t.Fatal(err)
+	}
+	return path, validation.Digest(raw)
+}
+
+func TestSearchTimeoutLeavesTimeToCertify(t *testing.T) {
+	fixture := filepath.Join("..", "..", "testdata", "django-13344")
+	authority := filepath.Join(fixture, "authority.json")
+	raw, err := os.ReadFile(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract validation.Contract
+	if err := json.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	solver, solverHash := pinnedTool(t, "sleep 30")
+	checker, checkerHash := pinnedTool(t, "exit 1")
+	dir := filepath.Join(t.TempDir(), "run")
+	var out, errs bytes.Buffer
+	got := Run(context.Background(), []string{"solve", "--authority", authority, "--authority-sha256", validation.Digest(raw), "--request-id", contract.RequestID, "--sources", filepath.Join(fixture, "sources.json"), "--solver", solver, "--solver-sha256", solverHash, "--checker", checker, "--checker-sha256", checkerHash, "--out", dir, "--timeout", "2s", "--query-timeout", "1m"}, &out, &errs)
+	if got != 2 {
+		t.Fatalf("exit %d: %s", got, errs.String())
+	}
+	saved, err := os.ReadFile(filepath.Join(dir, "bundle.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bundle run.Bundle
+	if err := json.Unmarshal(saved, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	// Certification runs after search, so a finished set check proves it had time.
+	if bundle.Search.Error == "" || bundle.Complete || !bundle.SetCheck.Complete || slices.Contains(bundle.Diagnostics, "REFERENCE_REACHABILITY_INCOMPLETE") {
+		t.Fatalf("search %q, complete %v, set check %+v, diagnostics %v", bundle.Search.Error, bundle.Complete, bundle.SetCheck, bundle.Diagnostics)
 	}
 }

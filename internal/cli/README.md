@@ -93,8 +93,9 @@ portable result metadata.
 
 Search length bounds live in the authority. CLI `--max-paths` (default 1,000)
 and `--max-queries` (10,000) are positive resource budgets. `solve --timeout`
-defaults to 2 minutes for search/certification, `--query-timeout` to 10 seconds
-per query, shared by its solver and checker. AHE `--timeout` defaults to 1 minute. Duration flags
+defaults to 2 minutes for search/certification. Search stops at 90% of it, so
+certification can still check the paths found so far. `--query-timeout` defaults
+to 10 seconds per query, shared by its solver and checker. AHE `--timeout` defaults to 1 minute. Duration flags
 use Go duration strings, e.g. `10s`; none of these limits proves no solution.
 
 Implementation: [cli.go](cli.go), [ahe.go](ahe.go), [candidate.go](candidate.go), [automaton.go](automaton.go).

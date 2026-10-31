@@ -280,10 +280,13 @@ plausible.
 The reached states are about 0.1–5.4% of the declared products, so the former
 domain limit measured the declaration, not the work.
 
-Under the default `--timeout 2m`, model C stopped with `INCONCLUSIVE`, `complete=false`
-and exit 2. Search and validation share that budget, so validation had no time
-left and the bundle lists no paths. Allow more time for models of this size, and
-plan for the run directory: every query keeps its formula and proof.
+Under the default `--timeout 2m`, model C does not finish. Search stops at 90% of
+the timeout so validation can still run, and validation took about 4 s. The run
+ended in 112 s with `FOUND`, `complete=false` and exit 2: all 414 forward paths were
+verified, 50 had receipts, and the other 364 kept `UNKNOWN` recovery. Before search
+stopped early, the same run listed no paths. At `--timeout 20s` it verified the 278
+paths found so far. Allow more time for a complete result, and plan for the run
+directory: every query keeps its formula and proof.
 
 ### Chosen limits
 

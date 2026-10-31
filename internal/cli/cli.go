@@ -87,6 +87,15 @@ func output(w io.Writer, v any) error {
 	return e.Encode(v)
 }
 
+// verificationShare is the fraction of solve --timeout, as a divisor, that search
+// leaves for certification, so a timeout keeps the paths found so far.
+const verificationShare = 10
+
+func searchContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	deadline, _ := ctx.Deadline() // solve always sets one.
+	return context.WithDeadline(ctx, deadline.Add(-timeout/verificationShare))
+}
+
 func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	f := flags("solve", errout)
 	aheConfig := f.String("ahe-config", "", "optional governed AHE query profile")
@@ -103,7 +112,7 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	checkerHash := f.String("checker-sha256", "", "pinned checker SHA-256")
 	graph := f.String("graph", "", "optional source-bound canonical graph")
 	graphHash := f.String("graph-sha256", "", "caller-pinned graph digest")
-	timeout := f.Duration("timeout", 2*time.Minute, "whole search and verification budget")
+	timeout := f.Duration("timeout", 2*time.Minute, "whole search and verification budget; search stops at 90% so verification can finish")
 	queryTimeout := f.Duration("query-timeout", 10*time.Second, "budget shared by the solver and checker of one query")
 	maxPaths := f.Int("max-paths", 1000, "forward path resource limit")
 	maxQueries := f.Int("max-queries", 10000, "solver call resource limit")
@@ -195,7 +204,9 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
-	result, searchErr := planning.Search(ctx, in.Authority.Contract(), runner, planning.Options{MaxPaths: *maxPaths, MaxQueries: *maxQueries})
+	searchCtx, stopSearch := searchContext(ctx, *timeout)
+	defer stopSearch()
+	result, searchErr := planning.Search(searchCtx, in.Authority.Contract(), runner, planning.Options{MaxPaths: *maxPaths, MaxQueries: *maxQueries})
 	bundle, certErr := run.Certify(ctx, in, result, *dir)
 	bundle.EvidenceMatrix = evidence.EvidenceMatrix
 	bundle.EvidenceScope = evidence.EvidenceScope
