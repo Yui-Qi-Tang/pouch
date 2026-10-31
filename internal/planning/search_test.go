@@ -334,3 +334,144 @@ func TestEncodeAcceptsComposedModelShape(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// optionContract chooses options one at a time, then takes one guarded step. With
+// fixed nil the choices stay in the model as on/off fields. Otherwise they are
+// fixed, so the options become separate models of the same rules.
+func optionContract(count int, fixed []bool) validation.Contract {
+	stages := []string{"run", "done"}
+	if fixed == nil {
+		stages = []string{}
+		for i := range count {
+			stages = append(stages, fmt.Sprintf("choose%d", i))
+		}
+		stages = append(stages, "run", "done")
+	}
+	fields := map[string][]string{"stage": stages, "work": {"0", "1"}}
+	for i := range 13 {
+		fields[fmt.Sprintf("base%02d", i)] = []string{"0", "1"}
+	}
+	if fixed == nil {
+		for i := range count {
+			fields[fmt.Sprintf("option%d", i)] = []string{"off", "on"}
+		}
+	}
+	frame := func(effect validation.State) []string {
+		out := []string{}
+		for field := range fields {
+			if _, ok := effect[field]; !ok {
+				out = append(out, field)
+			}
+		}
+		slices.Sort(out)
+		return out
+	}
+	actions := []validation.Action{}
+	add := func(id string, guard, effect validation.State) {
+		actions = append(actions, validation.Action{ID: id, Guard: guard, Effect: effect, Frame: frame(effect)})
+	}
+	if fixed == nil {
+		for i := range count {
+			on := validation.State{"stage": stages[i+1], fmt.Sprintf("option%d", i): "on"}
+			add(fmt.Sprintf("set%d-on", i), validation.State{"stage": stages[i]}, on)
+			add(fmt.Sprintf("set%d-off", i), validation.State{"stage": stages[i]}, validation.State{"stage": stages[i+1]})
+		}
+	}
+	for i := range count {
+		guard := validation.State{"stage": "run", "work": "0"}
+		if fixed == nil {
+			guard[fmt.Sprintf("option%d", i)] = "on"
+		} else if !fixed[i] {
+			continue
+		}
+		add(fmt.Sprintf("work-with-%d", i), guard, validation.State{"work": "1"})
+	}
+	add("work-plain", validation.State{"stage": "run", "work": "0"}, validation.State{"work": "1"})
+	add("finish", validation.State{"stage": "run", "work": "1"}, validation.State{"stage": "done"})
+	start := validation.State{}
+	for field, values := range fields {
+		start[field] = values[0]
+	}
+	limit := 2
+	if fixed == nil {
+		limit += count
+	}
+	return validation.Contract{SchemaVersion: validation.Version, RequestID: "options", SourceBinding: map[string]string{"synthetic:rules": strings.Repeat("a", 64)}, Assumptions: map[string]string{}, Model: validation.Model{Fields: fields, Forbidden: []validation.State{}, Actions: actions}, Start: start, Goal: validation.State{"stage": "done"}, Baseline: start, ForwardLimit: limit, ReturnLimit: 0}
+}
+
+func searchedActions(t *testing.T, c validation.Contract) []string {
+	t.Helper()
+	result, err := Search(t.Context(), c, truthSolver{}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.ForwardComplete {
+		t.Fatalf("forward search incomplete: %+v", result)
+	}
+	out := []string{}
+	for _, p := range result.Forward {
+		out = append(out, strings.Join(p.Trace.Actions, ","))
+	}
+	slices.Sort(out)
+	return out
+}
+
+func TestWideModelMatchesItsSeparateCombinations(t *testing.T) {
+	const options = 4
+	wide := optionContract(options, nil)
+	if len(wide.Model.Fields) != 19 {
+		t.Fatalf("got %d fields", len(wide.Model.Fields))
+	}
+	want := []string{}
+	for mask := range 1 << options {
+		fixed := make([]bool, options)
+		prefix := []string{}
+		for i := range fixed {
+			fixed[i] = mask&(1<<i) != 0
+			state := "off"
+			if fixed[i] {
+				state = "on"
+			}
+			prefix = append(prefix, fmt.Sprintf("set%d-%s", i, state))
+		}
+		for _, actions := range searchedActions(t, optionContract(options, fixed)) {
+			want = append(want, strings.Join(prefix, ",")+","+actions)
+		}
+	}
+	slices.Sort(want)
+	if got := searchedActions(t, wide); !slices.Equal(got, want) {
+		t.Fatalf("single model has %d paths, separate models have %d:\n%v\n%v", len(got), len(want), got, want)
+	}
+}
+
+func TestValidatedLimitsCompile(t *testing.T) {
+	model := func(fields, values int) validation.Contract {
+		c := validation.Contract{Model: validation.Model{Fields: map[string][]string{}, Forbidden: []validation.State{}}, Start: validation.State{}}
+		names := []string{}
+		for i := range fields {
+			name := fmt.Sprintf("f%03d", i)
+			names = append(names, name)
+			for v := range values {
+				c.Model.Fields[name] = append(c.Model.Fields[name], fmt.Sprint(v))
+			}
+			c.Start[name] = "0"
+		}
+		c.Model.Actions = []validation.Action{{ID: "a", Guard: validation.State{}, Effect: validation.State{"f000": "1"}, Frame: names[1:]}}
+		c.Goal = validation.State{"f000": "1"}
+		return c
+	}
+	opts, err := Options{}.defaults()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []validation.Contract{model(128, 2), model(16, 256), model(128, 32)} {
+		if _, err := encode(t.Context(), finiteModel(c.Model), c.Start, c.Goal, 0, nil, opts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []validation.Contract{model(17, 241)} {
+		if _, err := encode(t.Context(), finiteModel(c.Model), c.Start, c.Goal, 0, nil, opts); !errors.Is(err, finite.ErrInput) {
+			t.Fatalf("got %v, want the encoder to refuse the model", err)
+		}
+	}
+}

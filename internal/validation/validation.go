@@ -16,10 +16,13 @@ const Version = "pouch-finite-validation/v1"
 const MaxBytes = 4 << 20
 const maxSourceBindings = 32
 
-// Model limits match the Calx finite encoder, so an unsupported model is refused
-// here instead of failing during search.
+// Model limits stay within the Calx finite encoder, so an unsupported model is
+// refused here instead of failing during search. maxFields is lower than Calx
+// allows because closure memory grows with it. See docs/EVALUATION.md.
 const (
+	maxFields      = 128
 	maxFieldValues = 256
+	maxCoordinates = 4096
 	maxActions     = 1024
 	maxHorizon     = 4095
 )
@@ -145,12 +148,16 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 		return nil, reject("ASSUMPTIONS_REQUIRED")
 	}
 	a := &Authority{contract: c, digest: expected, actions: map[string]Action{}}
-	if len(c.Model.Fields) == 0 || len(c.Model.Fields) > 16 || len(c.Model.Actions) == 0 || len(c.Model.Actions) > maxActions || len(c.Model.Forbidden) > 256 || c.ForwardLimit < 0 || c.ForwardLimit > maxHorizon || c.ReturnLimit < 0 || c.ReturnLimit > maxHorizon {
+	if len(c.Model.Fields) == 0 || len(c.Model.Fields) > maxFields || len(c.Model.Actions) == 0 || len(c.Model.Actions) > maxActions || len(c.Model.Forbidden) > 256 || c.ForwardLimit < 0 || c.ForwardLimit > maxHorizon || c.ReturnLimit < 0 || c.ReturnLimit > maxHorizon {
 		return nil, reject("MODEL_BOUND")
 	}
+	coordinates := 0
 	for f, values := range c.Model.Fields {
 		if f == "" || len(f) > 200 || len(values) == 0 || len(values) > maxFieldValues {
 			return nil, reject("FIELD_DOMAIN")
+		}
+		if coordinates += len(values); coordinates > maxCoordinates {
+			return nil, reject("MODEL_BOUND")
 		}
 		seen := map[string]bool{}
 		for _, v := range values {

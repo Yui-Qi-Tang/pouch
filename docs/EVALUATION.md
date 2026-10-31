@@ -290,6 +290,7 @@ directory: every query keeps its formula and proof.
 
 ### Chosen limits
 
+- **128 fields and 4,096 coordinates**; see [Wide models](#wide-models).
 - **1,024 actions and 256 values per field** match the Calx encoder, so an
   unsupported model is refused before search. Model C needs 243 actions and a
   115-value field. The clause budget decides first at long horizons; Calx records
@@ -344,6 +345,69 @@ identical input formulas, query statuses and receipts.
 `pouch-finite-validation/v1` stays the contract version. Limits are not model
 semantics: the recorded packages produce the same receipts, and the frozen
 key-rotation formulas are byte-identical. Older binaries refuse wider models.
+
+### Wide models
+
+Recorded **2026-10-31** on darwin/arm64 with Calx `5649f75`, the pinned CaDiCaL and
+DRAT-trim, `--timeout 9m` and `--query-timeout 60s`. All models are synthetic and
+each ran once, so times are indicative. A 16-field limit refused models that use
+one field per on/off option, whatever they cost to encode.
+
+Runs above 128 fields used a test build with the field limit raised to 256.
+
+Each model below has 10 four-valued base fields, 1 stage field, 6 on/off fields and
+framed padding fields, with 103 actions, forward limit 8 and 320 forward paths:
+
+| Fields | Result | Queries | Run time | Peak memory | DRAT total | Largest CNF | `bundle.json` | Run directory |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| 17 | `FOUND`, `complete=true` | 457 | 30 s | 74 MiB | 87 MB | 2.1 MB | 3.5 MB | 1.6 GB |
+| 32 | `FOUND`, `complete=true` | 457 | 40 s | 107 MiB | 133 MB | 3.0 MB | 5.2 MB | 2.3 GB |
+| 64 | `FOUND`, `complete=true` | 457 | 58 s | 191 MiB | 242 MB | 5.1 MB | 8.9 MB | 3.8 GB |
+| 128 | `FOUND`, `complete=true` | 457 | 96 s | 387 MiB | 450 MB | 9.2 MB | 16 MB | 7.0 GB |
+| 224, 232, 240, 256 | `INCONCLUSIVE`, `complete=false`, exit 2 | 8–9 | 3–4 s | 231–264 MiB | 13–14 MB | 13–14 MB | 2.2–2.5 MB | 111–137 MB |
+
+The wider runs stopped at the solver's input limit, which is reported as a limit,
+not as absence. Calx measured the same limit at 232–240 two-valued fields. It
+depends on the model, and the 129–223 range was not measured.
+
+A closure holds one complete state per reached state, so its memory grows with the
+field count. These models reach exactly 65,536 states, with one path:
+
+| Fields | Result | Run time | Peak memory |
+|---:|---|---:|---:|
+| 16 | `FOUND`, `complete=true` | 5 s | 353 MiB |
+| 64 | `FOUND`, `complete=true` | 12 s | 1.3 GiB |
+| 128 | `FOUND`, `complete=true` | 22 s | 2.5 GiB |
+| 256 | `FOUND`, `complete=true` | 43 s | 4.8 GiB |
+
+**128 fields** is the widest value at which the 103-action shape completed under
+default limits, and it keeps the worst closure near 2.5 GiB. Calx allows 256, but
+256 would nearly double that peak, and the shape above stops at the input limit
+well before it. **4,096 coordinates** matches the Calx limit on the dense matrices
+built before the encoding budget is checked.
+
+Wider states also fill the 4 MiB package limit sooner. A `no_return` package held
+8,192 closed states at 17 fields, 2,048 at 64 and 1,024 at 128. The next size
+measured at each width, double the states, ended with `PACKAGE_SIZE_LIMIT` and
+`complete=false`, except at 128 fields, where it was not run.
+
+| Check | Result |
+|---|---|
+| 17 fields against an enumeration sharing no code with Pouch or Calx | Same 320 action sequences; also at 64 fields |
+| 17 fields against 64 separate 11-field models, one per option combination | Each separate run `complete=true`; their union equals the same 320 sequences |
+| 129 fields; 4,097 coordinates | `MODEL_BOUND` through `pouch solve`; `MODEL_BOUND` in the unit test |
+| Sampled packages at 17, 64 and 128 fields | 20 of 320 at each width passed `pouch verify` |
+| Key-rotation and Django fixtures, previous and current binary | Same formulas, packages, statuses and receipts; previous packages pass `verify` |
+| 128-field report, in a browser | Paths switched and forward/return replay stepped, without console errors or page overflow, including at phone width |
+| 17-field report, in a browser | Loaded and stepped once, without console errors or page overflow |
+
+At 128 fields the guard and effect matrices have 283 columns inside a scrolling
+box, with rows about 37 px tall and sticky headings. A step redrew in 276 ms with
+all three matrices open.
+
+The five private models that motivated this limit were not run. The separate-run
+workaround remains valid for them, but the agreement above is shown only for a
+synthetic model of the same shape.
 
 ## What remains unmeasured
 

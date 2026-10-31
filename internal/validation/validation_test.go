@@ -259,6 +259,17 @@ func TestAuthorityLimits(t *testing.T) {
 	accept("largest field", chainContract(t, maxFieldValues))
 	refuse("field too large", chainContract(t, maxFieldValues+1), "FIELD_DOMAIN")
 
+	accept("most fields", chainContract(t, slices.Repeat([]int{2}, 128)...))
+	refuse("too many fields", chainContract(t, slices.Repeat([]int{2}, 129)...), "MODEL_BOUND")
+
+	coordinates := slices.Repeat([]int{256}, 16)
+	most := chainContract(t, coordinates...)
+	most.Model.Actions = most.Model.Actions[:1]
+	accept("most coordinates", most)
+	over := chainContract(t, append(coordinates, 1)...)
+	over.Model.Actions = over.Model.Actions[:1]
+	refuse("too many coordinates", over, "MODEL_BOUND")
+
 	actions := chainContract(t, 2, 2)
 	act := actions.Model.Actions[0]
 	actions.Model.Actions = nil
