@@ -97,7 +97,8 @@ solutions, action identity, zero-step paths, legal cycles excluded by policy,
 budget edges and bounded-return misses. `planning/fixture_test.go` keeps the frozen
 key-rotation formulas byte-identical, keeps saved matrices equal to the Calx
 projection, and replays fixture search results against the original rules and
-saved path sets. Process tests cover wrong assignments,
+saved path sets. `projection/calx_test.go` keeps evidence matrices equal to the Calx
+`incidence` projection. Process tests cover wrong assignments,
 VERIFIED with exit 1, tool pin mismatches, immutable private copies, timeouts and
 artifact traversal/overwrite refusal.
 
