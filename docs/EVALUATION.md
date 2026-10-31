@@ -1,7 +1,8 @@
 # Experimental results and what they establish
 
-Documentation updated **2026-10-07**. Results below were recorded on
-**2026-10-03–04** for Pouch `0.1.0-dev` (unreleased).
+Documentation updated **2026-10-31**. Results below were recorded on
+**2026-10-03–04** for Pouch `0.1.0-dev` (unreleased), unless a section gives
+another date.
 
 **The completed evaluations support finite combination search, checked forward
 and return paths, and traceable repair/reversal records.** H30 tested selecting
@@ -238,6 +239,108 @@ blockers:
 - **H31 race check:** one one-second shell fixture timed out. The unchanged
   suite subsequently passed; this does not establish a unique timeout cause or
   a flakiness fix.
+
+## Composed finite models
+
+Recorded **2026-10-31** on darwin/arm64 with Calx `91319bc` and the pinned CaDiCaL
+and DRAT-trim. Each model ran twice; all sizes and counts matched, and times are
+indicative. The three models are
+private inputs and are not in this repository; these figures cannot be reproduced
+from it. All three use forward and return limits of 8 and declare no forbidden
+patterns.
+
+Before this change, each model was refused for its declared size. With
+`--timeout 9m` for model C and the default for the others, each run finished with
+`FOUND` and `complete=true`:
+
+| Model | Fields | Largest field | Domain product | Actions | Reached states | Forward paths | Solver queries | Run time |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| A | 8 | 11 | 105,600 | 91 | 173 | 969 | 1,923 | 59 s |
+| B | 10 | 8 | 161,280 | 41 | 167 | 590 | 1,220 | 27 s |
+| C | 3 | 115 | 4,140 | 243 | 225 | 414 | 1,215 | 210 s |
+
+| Model | DRAT total | Largest DRAT | Largest CNF | Largest package | `bundle.json` | Run directory |
+|---|---:|---:|---:|---:|---:|---:|
+| A | 531 MiB | 1.1 MiB | 1.0 MiB | 4.4 KiB | 5.9 MiB | 2.4 GiB |
+| B | 147 MiB | 432 KiB | 399 KiB | 6.7 KiB | 4.1 MiB | 761 MiB |
+| C | 3.1 GiB | 7.3 MiB | 7.6 MiB | 3.5 KiB | 3.9 MiB | 12 GiB |
+
+Reached states count the forward closure from the start, by a separate script
+that shares no code with Pouch or Calx. That script's path counts equal the table,
+and the original-rule set comparison in each run also matched. A sampled package
+from each run passed `pouch verify`, and each bundle passed `pouch render`. The
+reports for all three models loaded in a browser, switched paths and stepped through
+replays without console errors or page overflow, including at phone width. Matrix
+rows stay about 37 px tall with sticky action and heading cells, the active row
+scrolls into view, and model C redraws a step in about 23 ms with one matrix open.
+Every path ended as `NO_RETURN_IN_MODEL`. This is a statement about these models,
+not about any real system, and more paths do not make a composed model more
+plausible.
+
+The reached states are about 0.1–5.4% of the declared products, so the former
+domain limit measured the declaration, not the work.
+
+Under the default `--timeout 2m`, model C stopped with `INCONCLUSIVE`, `complete=false`
+and exit 2. Search and validation share that budget, so validation had no time
+left and the bundle lists no paths. Allow more time for models of this size, and
+plan for the run directory: every query keeps its formula and proof.
+
+### Chosen limits
+
+- **1,024 actions and 256 values per field** match the Calx encoder, so an
+  unsupported model is refused before search. Model C needs 243 actions and a
+  115-value field. The clause budget decides first at long horizons; Calx records
+  those measurements.
+- **65,536 reached states** per closure. One closure took 26–45 ms at 4,096 states
+  and 1.1 s with 72 MiB allocated at 65,536 states and 510 actions. The three
+  models reach at most 225 states, so this leaves room while keeping a closure
+  near one second. It cannot be lower than 4,096, because existing packages must
+  still verify.
+- **4 MiB packages** did not change. At 101–290 bytes per closed state, a `no_return`
+  package holds about 14,000–41,000 states, so that limit can stop first with
+  `PACKAGE_SIZE_LIMIT`.
+
+One certification run now shares each closure between packages. A synthetic model
+of 16 binary fields reaches exactly 65,536 states:
+
+| Paths | Closures shared | Timeout | Result | Time | Peak memory |
+|---:|---|---:|---|---:|---:|
+| 16 | No | 4 min | Complete | 58 s | 2.8 GiB |
+| 16 | Yes | 4 min | Complete, same path results | 43 s | 359 MiB |
+| 226 | No | 2 min | `INCONCLUSIVE`, 29 paths certified | 121 s | Not recorded |
+| 226 | Yes | 2 min | `INCONCLUSIVE`, 47 paths certified | 122 s | 396 MiB |
+| 226 | Yes | 9 min | Complete | 302 s | 493 MiB |
+
+Model B also gave identical path results with and without sharing. The three
+composed models gained little, because their closures are small: A and B changed
+by a few seconds, and C still needs more than the default 2 minutes. Each
+distinct endpoint still needs its own closures, so a model near the budget with
+many endpoints can need a longer timeout.
+
+### Limit checks
+
+Run through `pouch solve` with the pinned tools on synthetic models:
+
+| Case | Result |
+|---|---|
+| Closure over 65,536 states, with a path | `FOUND`, `complete=false`, `STATE_BUDGET_EXHAUSTED`, exit 2 |
+| Closure over 65,536 states, no path within bound | `INCONCLUSIVE`, exit 2 |
+| Closure of exactly 65,536 states | `FOUND`, `complete=true`, 3.3 MB package accepted by `verify` |
+| Package over 4 MiB | `FOUND`, `complete=false`, `PACKAGE_SIZE_LIMIT`, closure kept |
+| 1,024 actions at horizon 1 | `FOUND`, `complete=true` |
+| 1,025 actions; 257 values | `MODEL_BOUND`; `FIELD_DOMAIN` |
+| Clause budget reached at horizon 2 | Path from horizon 1 kept, `complete=false`, exit 2 |
+| Formula over the solver input limit | Query `INCONCLUSIVE` with the limit category, exit 2 |
+
+A seeded differential ran 34 random models with 65–107 actions and domain products
+of 4,320–15,750,000 against a separate Python enumeration. All 3,228 forward paths,
+bundle statuses and recovery results matched. Models with more than 400 paths were
+skipped. On the two Django fixtures, the previous and current binaries wrote
+identical input formulas, query statuses and receipts.
+
+`pouch-finite-validation/v1` stays the contract version. Limits are not model
+semantics: the recorded packages produce the same receipts, and the frozen
+key-rotation formulas are byte-identical. Older binaries refuse wider models.
 
 ## What remains unmeasured
 
