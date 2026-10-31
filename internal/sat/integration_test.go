@@ -41,6 +41,33 @@ func TestPinnedToolsIntegration(t *testing.T) {
 	if !result.Complete || len(result.Forward) != 2 || len(result.Returns) != 1 || result.Returns[0].Status != "RETURN_FOUND" {
 		t.Fatalf("bad search result %+v", result)
 	}
+	raw, err := json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := validation.NewAuthority(raw, validation.Digest(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range result.Forward {
+		if _, err := authority.ReplayForward(context.Background(), path.Trace); err != nil {
+			t.Fatal(err)
+		}
+	}
+	back := result.Returns[0]
+	reverse := c
+	reverse.Start, reverse.Goal, reverse.ForwardLimit = back.Endpoint, c.Baseline, c.ReturnLimit
+	raw, err = json.Marshal(reverse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replayer, err := validation.NewAuthority(raw, validation.Digest(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := replayer.ReplayForward(context.Background(), *back.Trace); err != nil {
+		t.Fatal(err)
+	}
 	satCount, unsatCount := 0, 0
 	for _, q := range result.Queries {
 		if !q.Verified {
@@ -111,21 +138,19 @@ func TestExistingAuthorityFixtures(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			files, err := filepath.Glob(filepath.Join(dir, name, "package-*.json"))
+			historicalRaw, err := os.ReadFile(filepath.Join(dir, name, "historical-paths.json"))
 			if err != nil {
 				t.Fatal(err)
 			}
+			var historical []struct {
+				Actions []string `json:"actions"`
+			}
+			if err := json.Unmarshal(historicalRaw, &historical); err != nil {
+				t.Fatal(err)
+			}
 			want := []string{}
-			for _, file := range files {
-				raw, err := os.ReadFile(file)
-				if err != nil {
-					t.Fatal(err)
-				}
-				var p validation.Package
-				if err := json.Unmarshal(raw, &p); err != nil {
-					t.Fatal(err)
-				}
-				want = append(want, strings.Join(p.Forward.Actions, "\x00"))
+			for _, path := range historical {
+				want = append(want, strings.Join(path.Actions, "\x00"))
 			}
 			slices.Sort(got)
 			slices.Sort(want)

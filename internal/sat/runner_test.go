@@ -134,3 +134,19 @@ func TestQueryErrorsOmitHostPaths(t *testing.T) {
 		t.Fatalf("uncategorized cause kept: %v", got)
 	}
 }
+
+// A formula over a Calx limit must reach planning as the limit category, which
+// keeps the query inconclusive instead of reading as UNSAT or a tool fault.
+func TestFormulaLimitKeepsItsCategory(t *testing.T) {
+	solver, solverHash := pinnedScript(t, "exit 1")
+	checker, checkerHash := pinnedScript(t, "exit 1")
+	r, err := New(Config{SolverPath: solver, SolverSHA256: solverHash, CheckerPath: checker, CheckerSHA256: checkerHash, ArtifactDir: filepath.Join(t.TempDir(), "evidence"), MaxClauses: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	formula := calxsat.CNF{Variables: []calxsat.Variable{{ID: 1}}, Clauses: [][]int{{1}, {1}}}
+	got, err := r.Solve(context.Background(), "q000000", formula)
+	if !errors.Is(err, calxsat.ErrLimit) || got.Verified || got.Status != "INCONCLUSIVE" || got.Assignment != nil {
+		t.Fatalf("%+v %v", got, err)
+	}
+}

@@ -94,12 +94,15 @@ return search was interrupted; overall `complete` is false on any error.
 The small propositional oracle in `planning/search_test.go` is test-only. Normal
 regressions cover every cell of a tiny one-step relation, same-length multiple
 solutions, action identity, zero-step paths, legal cycles excluded by policy,
-budget edges and bounded-return misses. Process tests cover wrong assignments,
+budget edges and bounded-return misses. `planning/fixture_test.go` keeps the frozen
+key-rotation formulas byte-identical, keeps saved matrices equal to the Calx
+projection, and replays fixture search results against the original rules and
+saved path sets. Process tests cover wrong assignments,
 VERIFIED with exit 1, tool pin mismatches, immutable private copies, timeouts and
 artifact traversal/overwrite refusal.
 
 Optional real-tool tests use `POUCH_TEST_CADICAL`, `POUCH_TEST_CADICAL_SHA256`,
 `POUCH_TEST_DRAT_TRIM`, and `POUCH_TEST_DRAT_TRIM_SHA256`. With
 `POUCH_TEST_AUTHORITY_DIR`, the two existing migration fixtures are searched
-first; only afterward are historical package path sets read for comparison.
+first; only afterward is each fixture's `historical-paths.json` read for comparison.
 These tests also submit the new certificates to the independent Go receiver.

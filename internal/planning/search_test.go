@@ -3,6 +3,7 @@ package planning
 import (
 	"context"
 	"errors"
+	"fmt"
 	"maps"
 	"reflect"
 	"slices"
@@ -167,6 +168,32 @@ func TestLimitsAndCancellationRemainIncomplete(t *testing.T) {
 		t.Fatalf("large encoding must be rejected before allocation: %v", err)
 	}
 }
+
+// limitedSolver answers like truthSolver until a formula limit stops it.
+type limitedSolver struct {
+	remaining *int
+}
+
+func (s limitedSolver) Solve(ctx context.Context, id string, c sat.CNF) (SolveResult, error) {
+	if *s.remaining == 0 {
+		return SolveResult{Status: "INCONCLUSIVE"}, sat.ErrLimit
+	}
+	*s.remaining--
+	return truthSolver{}.Solve(ctx, id, c)
+}
+
+func TestSolverLimitKeepsFoundPaths(t *testing.T) {
+	// Horizons 0 and 1 are UNSAT, and horizon 2 yields the first path.
+	remaining := 3
+	r, err := Search(context.Background(), twoBits(), limitedSolver{remaining: &remaining}, Options{})
+	if !errors.Is(err, sat.ErrLimit) || r.Status != "INCONCLUSIVE" || r.Complete || r.ForwardComplete || len(r.Forward) != 1 {
+		t.Fatalf("%+v %v", r, err)
+	}
+	if last := r.Queries[len(r.Queries)-1]; last.Error == "" || last.Verified {
+		t.Fatalf("%+v", last)
+	}
+}
+
 func TestMatrixRoundTripAndStableOrdering(t *testing.T) {
 	c := twoBits()
 	m, err := Project(c)
@@ -279,5 +306,31 @@ func TestSimplePolicyRejectsLegalCycleBeforeGoal(t *testing.T) {
 	r, err := Search(context.Background(), c, truthSolver{}, Options{})
 	if err != nil || !r.Complete || len(r.Forward) != 1 || !slices.Equal(r.Forward[0].Trace.Actions, []string{"finish"}) {
 		t.Fatalf("cycle escaped simple policy: %+v %v", r, err)
+	}
+}
+
+func TestEncodeAcceptsComposedModelShape(t *testing.T) {
+	fields := map[string][]string{}
+	start := validation.State{}
+	for field, size := range map[string]int{"a": 115, "b": 18, "c": 2} {
+		start[field] = "0"
+		for v := range size {
+			fields[field] = append(fields[field], fmt.Sprint(v))
+		}
+	}
+	actions := []validation.Action{}
+	for i := range 243 {
+		actions = append(actions, validation.Action{ID: fmt.Sprintf("a%03d", i), Guard: validation.State{"a": fmt.Sprint(i % 114)}, Effect: validation.State{"a": fmt.Sprint(i%114 + 1)}, Frame: []string{"b", "c"}})
+	}
+	c := validation.Contract{SchemaVersion: validation.Version, RequestID: "q", SourceBinding: map[string]string{"source:1": validation.Digest([]byte("rule"))}, Assumptions: map[string]string{}, Model: validation.Model{Fields: fields, Forbidden: []validation.State{}, Actions: actions}, Start: start, Goal: validation.State{"a": "8"}, Baseline: start, ForwardLimit: 8, ReturnLimit: 8}
+	if _, err := Project(c); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := Options{}.defaults()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := encode(t.Context(), finiteModel(c.Model), c.Start, c.Goal, c.ForwardLimit, nil, opts); err != nil {
+		t.Fatal(err)
 	}
 }
