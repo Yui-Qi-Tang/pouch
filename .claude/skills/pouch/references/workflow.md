@@ -234,7 +234,7 @@ Read `status`, `recovery_status` and `reason` separately. An `UNKNOWN` recovery 
 | `runtime_status: NOT_RUN` | Materialization did not execute changes; later execution uses a separate record |
 | `status: RECORDED_CHECKS_PASS` | Runtime binding checks supplied records/artifact bytes; not log authenticity or fresh execution |
 | `baseline_discriminating: false` | Required tests already passed in the supplied baseline; do not claim demonstrated repair of a failing control |
-| `UNKNOWN` | Recovery has not been established; `reason` can identify incomplete search or `RETURN_EXISTS_BEYOND_SEARCH_BOUND` |
+| `UNKNOWN` | Recovery has not been established; `reason` can identify incomplete search, `RETURN_EXISTS_BEYOND_SEARCH_BOUND`, or a resource limit such as `STATE_BUDGET_EXHAUSTED` or `PACKAGE_SIZE_LIMIT` |
 
 Also inspect `set_check`, `diagnostics`, `search.forward_complete`, path `forward_verified`, and package/receipt availability. Read forward traces from `search.forward` and recovery details from `paths` / `search.returns`; do not infer them from UI step counts alone. One accepted path is not a complete set, and a valid proof for a CNF does not alone show that the CNF encodes the user's original question.
 

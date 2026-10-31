@@ -2,10 +2,13 @@ package run
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/planning"
@@ -66,6 +69,133 @@ func TestPartialSearchPreservesVerifiedForward(t *testing.T) {
 		t.Fatalf("%+v %v", b, e)
 	}
 }
+
+// chainInput declares one field per size, plus one single-valued padding field
+// when padding is nonempty. Each action advances one field by one value, so
+// every combination of values is reachable and the start is never revisited.
+func chainInput(t *testing.T, padding string, forwardLimit int, sizes ...int) Inputs {
+	t.Helper()
+	fields, start := map[string][]string{}, validation.State{}
+	names := []string{}
+	for i, size := range sizes {
+		field := fmt.Sprintf("f%d", i)
+		names = append(names, field)
+		start[field] = "0"
+		for v := range size {
+			fields[field] = append(fields[field], fmt.Sprint(v))
+		}
+	}
+	if padding != "" {
+		for i := range 14 {
+			field := fmt.Sprintf("pad%02d", i)
+			names = append(names, field)
+			fields[field], start[field] = []string{padding}, padding
+		}
+	}
+	actions := []validation.Action{}
+	for i := range sizes {
+		field := fmt.Sprintf("f%d", i)
+		frame := []string{}
+		for _, name := range names {
+			if name != field {
+				frame = append(frame, name)
+			}
+		}
+		for v := 0; v+1 < sizes[i]; v++ {
+			actions = append(actions, validation.Action{ID: fmt.Sprintf("%s-%d", field, v), Guard: validation.State{field: fmt.Sprint(v)}, Effect: validation.State{field: fmt.Sprint(v + 1)}, Frame: frame})
+		}
+	}
+	c := validation.Contract{SchemaVersion: validation.Version, RequestID: "q", SourceBinding: map[string]string{"source:1": validation.Digest([]byte("rule"))}, Assumptions: map[string]string{}, Model: validation.Model{Fields: fields, Forbidden: []validation.State{}, Actions: actions}, Start: start, Goal: validation.State{"f0": "1"}, Baseline: start, ForwardLimit: forwardLimit, ReturnLimit: 1}
+	raw, e := json.Marshal(c)
+	if e != nil {
+		t.Fatal(e)
+	}
+	a, e := validation.NewAuthority(raw, validation.Digest(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	return Inputs{Authority: a, AuthorityRaw: raw}
+}
+
+func firstChainStep(in Inputs) planning.Result {
+	c := in.Authority.Contract()
+	end := validation.State{}
+	for field, value := range c.Start {
+		end[field] = value
+	}
+	end["f0"] = "1"
+	return planning.Result{ForwardComplete: true, Complete: true, Forward: []planning.Path{{ID: "p000000", Trace: validation.Trace{States: []validation.State{c.Start, end}, Actions: []string{"f0-0"}, ClaimShortest: true}, ReturnIndex: 0}}, Returns: []planning.Return{{Endpoint: end, Status: "NO_RETURN_WITHIN_BOUND", CompleteWithinBound: true}}}
+}
+
+func TestStateBudgetLeavesPathsIncomplete(t *testing.T) {
+	in := chainInput(t, "", 1, 256, 256, 2)
+	b, e := Certify(t.Context(), in, firstChainStep(in), t.TempDir())
+	if e != nil || b.Status != "FOUND" || b.Complete || len(b.Paths) != 1 {
+		t.Fatalf("%+v %v", b, e)
+	}
+	path := b.Paths[0]
+	if !path.ForwardVerified || path.RecoveryStatus != "UNKNOWN" || path.Reason != "STATE_BUDGET_EXHAUSTED" || path.Receipt != nil || path.PackageFile != "" || path.ClosureFile != "" {
+		t.Fatalf("%+v", path)
+	}
+	if !slices.Contains(b.Diagnostics, "REFERENCE_REACHABILITY_INCOMPLETE") {
+		t.Fatal(b.Diagnostics)
+	}
+}
+
+func TestStateBudgetIsNotAbsence(t *testing.T) {
+	in := chainInput(t, "", 0, 256, 256, 2)
+	dir := t.TempDir()
+	b, e := Certify(t.Context(), in, planning.Result{ForwardComplete: true, Complete: true}, dir)
+	if e != nil || b.Status != "INCONCLUSIVE" || b.Complete || !b.SetCheck.Complete {
+		t.Fatalf("%+v %v", b, e)
+	}
+	if _, e = os.Stat(filepath.Join(dir, "forward-closure.json")); !os.IsNotExist(e) {
+		t.Fatal("a stopped closure was saved as complete", e)
+	}
+}
+
+func TestOversizedPackageIsNotARejection(t *testing.T) {
+	in := chainInput(t, strings.Repeat("p", 200), 1, 256, 8)
+	b, e := Certify(t.Context(), in, firstChainStep(in), t.TempDir())
+	if e != nil || b.Status != "FOUND" || b.Complete {
+		t.Fatalf("%v %v %v", b.Status, b.Complete, e)
+	}
+	path := b.Paths[0]
+	if path.RecoveryStatus != "UNKNOWN" || path.Reason != "PACKAGE_SIZE_LIMIT" || path.Return != nil || path.Receipt != nil || path.PackageFile != "" {
+		t.Fatalf("%+v", path)
+	}
+}
+
+// expiringContext reports cancellation after a fixed number of checks.
+type expiringContext struct {
+	context.Context
+	checks int
+}
+
+func (c *expiringContext) Err() error {
+	if c.checks == 0 {
+		return context.Canceled
+	}
+	c.checks--
+	return nil
+}
+
+func TestInterruptionIsNotARejection(t *testing.T) {
+	in := simpleInput(t, false, 0)
+	for checks := 0; ; checks++ {
+		b, e := Certify(&expiringContext{Context: t.Context(), checks: checks}, in, noReturnResult(), t.TempDir())
+		if e == nil {
+			if checks == 0 || !b.Complete {
+				t.Fatalf("checks %d: %+v", checks, b)
+			}
+			return
+		}
+		if b.Status == "REJECTED" {
+			t.Fatalf("checks %d: %v was reported as rejected", checks, e)
+		}
+	}
+}
+
 func TestFixtureSourcesAndTamperRefusals(t *testing.T) {
 	for _, name := range []string{"synthetic-key-rotation", "django-13344", "django-13344-repair"} {
 		dir := filepath.Join("..", "..", "testdata", name)

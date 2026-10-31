@@ -37,8 +37,8 @@ are retained, not edited. Paths are confined relative paths with portable ASCII
 letters, digits, `_`, `-`, `.`, `/`; `.git` is prohibited.
 
 Limits: 4 MiB input, 1–8 groups, 1–16 options per group, 1–32 target files,
-0–256 constraints. The existing model limits (4,096 Cartesian states, 64 actions)
-also apply; the smaller effective bound wins.
+0–256 constraints. The existing model limits (256 values per field, 1,024
+actions) also apply; the smaller effective bound wins.
 
 The compiler produces a canonical group-selection order, then `submit_candidate`.
 A forbidden assignment disables submission. Withdrawal in reverse group order

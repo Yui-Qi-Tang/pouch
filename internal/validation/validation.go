@@ -14,8 +14,23 @@ import (
 
 const Version = "pouch-finite-validation/v1"
 const MaxBytes = 4 << 20
-const maxStates = 4096
 const maxSourceBindings = 32
+
+// Model limits match the Calx finite encoder, so an unsupported model is refused
+// here instead of failing during search.
+const (
+	maxFieldValues = 256
+	maxActions     = 1024
+	maxHorizon     = 4095
+)
+
+// maxReachedStates bounds each original-rule closure. Reached states, not the
+// declared domain product, measure this work. See docs/EVALUATION.md.
+const maxReachedStates = 65536
+
+// ErrStateBudget reports a closure stopped at maxReachedStates. It is a resource
+// limit, neither a rejection nor evidence about reachability.
+var ErrStateBudget = errors.New("reached state budget exhausted")
 
 // State is a complete assignment of named categorical coordinates.
 type State map[string]string
@@ -130,12 +145,11 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 		return nil, reject("ASSUMPTIONS_REQUIRED")
 	}
 	a := &Authority{contract: c, digest: expected, actions: map[string]Action{}}
-	if len(c.Model.Fields) == 0 || len(c.Model.Fields) > 16 || len(c.Model.Actions) == 0 || len(c.Model.Actions) > 64 || len(c.Model.Forbidden) > 256 || c.ForwardLimit < 0 || c.ForwardLimit >= maxStates || c.ReturnLimit < 0 || c.ReturnLimit >= maxStates {
+	if len(c.Model.Fields) == 0 || len(c.Model.Fields) > 16 || len(c.Model.Actions) == 0 || len(c.Model.Actions) > maxActions || len(c.Model.Forbidden) > 256 || c.ForwardLimit < 0 || c.ForwardLimit > maxHorizon || c.ReturnLimit < 0 || c.ReturnLimit > maxHorizon {
 		return nil, reject("MODEL_BOUND")
 	}
-	product := 1
 	for f, values := range c.Model.Fields {
-		if f == "" || len(f) > 200 || len(values) == 0 || len(values) > 64 {
+		if f == "" || len(f) > 200 || len(values) == 0 || len(values) > maxFieldValues {
 			return nil, reject("FIELD_DOMAIN")
 		}
 		seen := map[string]bool{}
@@ -144,10 +158,6 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 				return nil, reject("FIELD_DOMAIN")
 			}
 			seen[v] = true
-		}
-		product *= len(values)
-		if product > maxStates {
-			return nil, reject("MODEL_BOUND")
 		}
 		a.fields = append(a.fields, f)
 	}
@@ -298,6 +308,9 @@ func (a *Authority) distances(ctx context.Context, start State) (map[string]int,
 			if _, ok := d[key]; ok {
 				continue
 			}
+			if len(queue) == maxReachedStates {
+				return nil, nil, ErrStateBudget
+			}
 			d[key] = d[a.key(s)] + 1
 			queue = append(queue, next)
 		}
@@ -315,10 +328,57 @@ func (a *Authority) shortest(dist map[string]int, states []State, goal State) in
 	return best
 }
 
+// closureFact keeps only what Validate reads from one closure, so a long run does
+// not retain every reached state. Keys are kept only while the target is
+// unreachable, because only a no_return package compares them.
+type closureFact struct {
+	shortest  int
+	reachable int
+	keys      map[string]int
+}
+
+// Session validates many packages against one Authority and reuses each closure.
+// Closures depend only on the authority's rules, so packages from the same run
+// that share a start or endpoint need one traversal. It is not safe for concurrent
+// use.
+type Session struct {
+	authority *Authority
+	closures  map[string]closureFact
+}
+
+// NewSession returns an empty Session for validating packages from one run.
+func (a *Authority) NewSession() *Session {
+	return &Session{authority: a, closures: map[string]closureFact{}}
+}
+
+func (s *Session) closure(ctx context.Context, start, target State) (closureFact, error) {
+	a := s.authority
+	key := a.key(start) + a.key(target)
+	if fact, ok := s.closures[key]; ok {
+		return fact, nil
+	}
+	dist, states, err := a.distances(ctx, start)
+	if err != nil {
+		return closureFact{}, err
+	}
+	fact := closureFact{shortest: a.shortest(dist, states, target), reachable: len(states)}
+	if fact.shortest < 0 {
+		fact.keys = dist
+	}
+	s.closures[key] = fact
+	return fact, nil
+}
+
 // Validate checks one caller-selected request and never reads paths from a package.
 // A successful receipt is not proof of source entailment, runtime restore or admission.
 func (a *Authority) Validate(ctx context.Context, requestID string, raw []byte) (Receipt, error) {
+	return a.NewSession().Validate(ctx, requestID, raw)
+}
+
+// Validate is Authority.Validate with this Session's closures reused.
+func (s *Session) Validate(ctx context.Context, requestID string, raw []byte) (Receipt, error) {
 	var receipt Receipt
+	a := s.authority
 	if ctx == nil || a == nil {
 		return receipt, errors.New("authority and context required")
 	}
@@ -345,19 +405,19 @@ func (a *Authority) Validate(ctx context.Context, requestID string, raw []byte) 
 	if err != nil {
 		return receipt, err
 	}
-	distances, states, err := a.distances(ctx, a.contract.Start)
+	forward, err := s.closure(ctx, a.contract.Start, a.contract.Goal)
 	if err != nil {
 		return receipt, err
 	}
-	shortest := a.shortest(distances, states, a.contract.Goal)
+	shortest := forward.shortest
 	if p.Forward.ClaimShortest && shortest != len(p.Forward.Actions) {
 		return receipt, reject("FORWARD_NOT_SHORTEST")
 	}
-	rd, rs, err := a.distances(ctx, end)
+	back, err := s.closure(ctx, end, a.contract.Baseline)
 	if err != nil {
 		return receipt, err
 	}
-	returnShortest := a.shortest(rd, rs, a.contract.Baseline)
+	returnShortest := back.shortest
 	returnCost := -1
 	switch p.ReturnKind {
 	case "return":
@@ -372,7 +432,7 @@ func (a *Authority) Validate(ctx context.Context, requestID string, raw []byte) 
 			return receipt, reject("RETURN_NOT_SHORTEST")
 		}
 	case "no_return":
-		if len(p.ClosedStates) > maxStates {
+		if len(p.ClosedStates) > maxReachedStates {
 			return receipt, reject("CLOSURE_BOUND")
 		}
 		if p.Return != nil {
@@ -388,10 +448,10 @@ func (a *Authority) Validate(ctx context.Context, requestID string, raw []byte) 
 			}
 			closure[a.key(s)] = true
 		}
-		if len(closure) != len(rd) {
+		if len(closure) != len(back.keys) {
 			return receipt, reject("CLOSURE_INCOMPLETE")
 		}
-		for key := range rd {
+		for key := range back.keys {
 			if !closure[key] {
 				return receipt, reject("CLOSURE_INCOMPLETE")
 			}
@@ -399,7 +459,7 @@ func (a *Authority) Validate(ctx context.Context, requestID string, raw []byte) 
 	default:
 		return receipt, reject("RETURN_KIND")
 	}
-	return Receipt{SchemaVersion: Version, RequestID: requestID, AuthoritySHA256: a.digest, PackageSHA256: Digest(raw), ConclusionKind: "model_conditional_conclusion", ForwardCost: len(p.Forward.Actions), ForwardShortest: shortest, ReturnKind: p.ReturnKind, ReturnCost: returnCost, ReturnShortest: returnShortest, ReachableStates: len(rs)}, nil
+	return Receipt{SchemaVersion: Version, RequestID: requestID, AuthoritySHA256: a.digest, PackageSHA256: Digest(raw), ConclusionKind: "model_conditional_conclusion", ForwardCost: len(p.Forward.Actions), ForwardShortest: shortest, ReturnKind: p.ReturnKind, ReturnCost: returnCost, ReturnShortest: returnShortest, ReachableStates: back.reachable}, nil
 }
 
 // SourceIDs returns a copy for the caller to correlate source records.

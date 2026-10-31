@@ -21,9 +21,9 @@ success. Check the returned Go error as well as the fields.
 | `RequestID` | Caller-selected nonempty identity, at most 200 bytes. |
 | `SourceBinding` | 1–32 source IDs mapped to exact-content SHA-256 strings; lowercase hexadecimal, 64 characters. IDs are nonempty and at most 200 bytes. |
 | `Assumptions` | Explicit string-to-string declarations. An empty object is permitted; null or missing is not. Assumptions are not observed facts. |
-| `Model.Fields` | 1–16 categorical fields, each with 1–64 distinct nonempty string values. Field names and values are at most 200 bytes. The product of domain sizes is at most 4,096. Boolean or numeric JSON values are not coerced into strings. |
+| `Model.Fields` | 1–16 categorical fields, each with 1–256 distinct nonempty string values. Field names and values are at most 200 bytes. The product of domain sizes is not limited; original-rule validation limits reached states instead. Boolean or numeric JSON values are not coerced into strings. |
 | `Model.Forbidden` | At most 256 nonempty partial state patterns. A complete state matching every entry of any one pattern is excluded. |
-| `Model.Actions` | 1–64 actions with unique nonempty IDs, at most 200 bytes. Guards are exact conjunctions; effects assign constant values. Every field occurs exactly once in either effect or frame. An empty guard is allowed; an empty effect is not. |
+| `Model.Actions` | 1–1,024 actions with unique nonempty IDs, at most 200 bytes. Guards are exact conjunctions; effects assign constant values. Every field occurs exactly once in either effect or frame. An empty guard is allowed; an empty effect is not. |
 | `Start` / `Baseline` | Complete valid assignments, with one declared value for every field. Baseline is the recovery target; it need not equal Start. |
 | `Goal` | Nonempty partial or complete assignment. All listed conditions must match. |
 | `ForwardLimit` / `ReturnLimit` | Inclusive maximum action counts, integers 0–4,095. Zero means only the initial state is checked, not unlimited. |

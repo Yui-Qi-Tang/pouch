@@ -84,30 +84,44 @@ func Certify(ctx context.Context, in Inputs, result planning.Result, outputDir s
 	}
 	complete := result.Complete && check.Complete && check.Matches && setErr == nil
 	cache := map[string]validation.Reachability{}
-	forwardReach, err := in.Authority.Reachable(ctx, c.Start, c.Goal)
-	if err != nil {
+	session := in.Authority.NewSession()
+	forwardReach, reachErr := in.Authority.Reachable(ctx, c.Start, c.Goal)
+	if reachErr != nil {
 		b.Diagnostics = append(b.Diagnostics, "REFERENCE_REACHABILITY_INCOMPLETE")
-		return b, err
+		if !errors.Is(reachErr, validation.ErrStateBudget) {
+			return b, reachErr
+		}
+		complete = false
 	}
 	for _, path := range result.Forward {
 		pr := PathResult{ID: path.ID, RecoveryStatus: "UNKNOWN"}
 		end, err := in.Authority.ReplayForward(ctx, path.Trace)
 		if err != nil {
-			b.Status = "REJECTED"
+			markRejection(&b, err)
 			return b, err
 		}
-		if path.Trace.ClaimShortest && forwardReach.Shortest != len(path.Trace.Actions) {
+		if reachErr == nil && path.Trace.ClaimShortest && forwardReach.Shortest != len(path.Trace.Actions) {
 			b.Status = "REJECTED"
 			return b, errors.New("false shortest forward claim")
 		}
 		pr.ForwardVerified = true
+		if reachErr != nil {
+			pr.Reason = "STATE_BUDGET_EXHAUSTED"
+			b.Paths = append(b.Paths, pr)
+			continue
+		}
 		keyBytes, _ := json.Marshal(end)
 		key := string(keyBytes)
+		// The endpoint's closure is a subset of the finished forward closure, so
+		// the state budget cannot stop it.
 		closure, ok := cache[key]
 		if !ok {
 			closure, err = in.Authority.Reachable(ctx, end, c.Baseline)
 			if err != nil {
 				return b, err
+			}
+			if closure.Witness != nil {
+				closure.States = nil // Only a no-return certificate reads the states.
 			}
 			cache[key] = closure
 		}
@@ -156,9 +170,15 @@ func Certify(ctx context.Context, in Inputs, result planning.Result, outputDir s
 				return b, err
 			}
 			raw = append(raw, '\n')
-			receipt, err := in.Authority.Validate(ctx, c.RequestID, raw)
+			if len(raw) > validation.MaxBytes {
+				complete = false
+				pr.RecoveryStatus, pr.Return, pr.Reason = "UNKNOWN", nil, "PACKAGE_SIZE_LIMIT"
+				b.Paths = append(b.Paths, pr)
+				continue
+			}
+			receipt, err := session.Validate(ctx, c.RequestID, raw)
 			if err != nil {
-				b.Status = "REJECTED"
+				markRejection(&b, err)
 				return b, err
 			}
 			pr.PackageFile = "packages/" + path.ID + ".json"
@@ -174,7 +194,7 @@ func Certify(ctx context.Context, in Inputs, result planning.Result, outputDir s
 	b.Complete = complete
 	if len(result.Forward) > 0 {
 		b.Status = "FOUND"
-	} else if result.ForwardComplete && check.Complete && check.Matches {
+	} else if result.ForwardComplete && check.Complete && check.Matches && reachErr == nil {
 		if forwardReach.Witness == nil {
 			b.Status = "NO_PATH_IN_MODEL"
 			if err := writeJSON(outputDir, "forward-closure.json", forwardReach); err != nil {
@@ -188,6 +208,14 @@ func Certify(ctx context.Context, in Inputs, result planning.Result, outputDir s
 		b.Diagnostics = append(b.Diagnostics, "RUN_NOT_FULLY_VERIFIED")
 	}
 	return b, nil
+}
+
+// markRejection keeps a timeout or budget error inconclusive.
+func markRejection(b *Bundle, err error) {
+	var rejection *validation.Rejection
+	if errors.As(err, &rejection) {
+		b.Status = "REJECTED"
+	}
 }
 
 func writeJSON(root, name string, value any) error {

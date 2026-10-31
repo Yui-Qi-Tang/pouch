@@ -216,7 +216,7 @@ The future Auto mode objective is: the operating AI reads diagnostics → invest
 
 ## 9. Exact limits of the existing validator
 
-`internal/validation` retains `pouch-finite-validation/v1`: at most 16 fields, 64 string values per field, 64 actions, 256 forbidden patterns, 4,096 Cartesian states, 32 source bindings, and 4 MiB of JSON. Forward/return limits use at-most semantics. It requires exact casing, rejects unknown or missing struct fields and duplicate or case-aliased keys, and rejects null except for the optional return field.
+`internal/validation` retains `pouch-finite-validation/v1`: at most 16 fields, 256 string values per field, 1,024 actions, 256 forbidden patterns, 32 source bindings, and 4 MiB of JSON. Forward/return limits use at-most semantics, from 0 through 4,095. The declared domain product is not limited. Each original-rule closure stops after 65,536 reached states, which leaves the result incomplete rather than rejecting the model. Raising these limits kept v1 because accepted models and packages keep their meaning; older binaries refuse the wider models and packages with `MODEL_BOUND`, `FIELD_DOMAIN` or `CLOSURE_BOUND`. Measurements are in [EVALUATION.md](EVALUATION.md#composed-finite-models). It requires exact casing, rejects unknown or missing struct fields and duplicate or case-aliased keys, and rejects null except for the optional return field.
 
 `internal/automata` has a separate `pouch-automaton/v1` contract for synchronous Boolean automata, because a whole-lattice update is not one declared action. It does not change this contract, and none of its limits apply there.
 

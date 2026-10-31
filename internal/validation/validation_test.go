@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -137,7 +140,7 @@ func TestStrictTypesAndCaller(t *testing.T) {
 	code(t, e, "AUTHORITY_HASH_MISMATCH")
 }
 func TestAuthorityModelBounds(t *testing.T) {
-	for _, mutate := range []func(*Contract){func(c *Contract) { c.Model.Actions[0].Frame = []string{"x"} }, func(c *Contract) { c.Model.Actions[0].Effect = State{} }, func(c *Contract) { c.Model.Fields["x"] = []string{"0", "0"} }, func(c *Contract) { c.Model.Forbidden = []State{{}} }, func(c *Contract) { c.Start = State{} }, func(c *Contract) { c.Model.Fields["huge"] = make([]string, 65) }} {
+	for _, mutate := range []func(*Contract){func(c *Contract) { c.Model.Actions[0].Frame = []string{"x"} }, func(c *Contract) { c.Model.Actions[0].Effect = State{} }, func(c *Contract) { c.Model.Fields["x"] = []string{"0", "0"} }, func(c *Contract) { c.Model.Forbidden = []State{{}} }, func(c *Contract) { c.Start = State{} }, func(c *Contract) { c.Model.Fields["huge"] = make([]string, maxFieldValues+1) }} {
 		c, _ := fixture(t)
 		mutate(&c)
 		raw := bytesOf(t, c)
@@ -207,4 +210,188 @@ func TestExpandedSourceBindingRefusals(t *testing.T) {
 	raw := bytesOf(t, c)
 	_, err := NewAuthority(raw, Digest(raw))
 	code(t, err, "SOURCE_BINDING")
+}
+
+// chainContract declares one field per size. Each action advances one field by
+// one value, so every combination of field values is reachable from the start.
+func chainContract(t *testing.T, sizes ...int) Contract {
+	t.Helper()
+	c, _ := fixture(t)
+	c.Model = Model{Fields: map[string][]string{}, Forbidden: []State{}}
+	c.Start = State{}
+	names := []string{}
+	for i, size := range sizes {
+		field := fmt.Sprintf("f%02d", i)
+		names = append(names, field)
+		for v := range size {
+			c.Model.Fields[field] = append(c.Model.Fields[field], fmt.Sprint(v))
+		}
+		c.Start[field] = "0"
+	}
+	for _, field := range names {
+		frame := slices.DeleteFunc(slices.Clone(names), func(f string) bool { return f == field })
+		for v := 0; v+1 < len(c.Model.Fields[field]); v++ {
+			c.Model.Actions = append(c.Model.Actions, Action{ID: fmt.Sprintf("%s-%d", field, v), Guard: State{field: fmt.Sprint(v)}, Effect: State{field: fmt.Sprint(v + 1)}, Frame: frame})
+		}
+	}
+	c.Goal, c.Baseline = State{"f00": "1"}, c.Start
+	c.ForwardLimit, c.ReturnLimit = 1, 1
+	return c
+}
+
+func TestAuthorityLimits(t *testing.T) {
+	accept := func(name string, c Contract) {
+		t.Run(name, func(t *testing.T) {
+			raw := bytesOf(t, c)
+			if _, e := NewAuthority(raw, Digest(raw)); e != nil {
+				t.Fatal(e)
+			}
+		})
+	}
+	refuse := func(name string, c Contract, want string) {
+		t.Run(name, func(t *testing.T) {
+			raw := bytesOf(t, c)
+			_, e := NewAuthority(raw, Digest(raw))
+			code(t, e, want)
+		})
+	}
+	accept("domain product above the former limit", chainContract(t, 256, 256, 256))
+	accept("largest field", chainContract(t, maxFieldValues))
+	refuse("field too large", chainContract(t, maxFieldValues+1), "FIELD_DOMAIN")
+
+	actions := chainContract(t, 2, 2)
+	act := actions.Model.Actions[0]
+	actions.Model.Actions = nil
+	for i := range maxActions {
+		act.ID = fmt.Sprint(i)
+		actions.Model.Actions = append(actions.Model.Actions, act)
+	}
+	accept("most actions", actions)
+	act.ID = "extra"
+	actions.Model.Actions = append(actions.Model.Actions, act)
+	refuse("too many actions", actions, "MODEL_BOUND")
+
+	horizon := chainContract(t, 2)
+	horizon.ForwardLimit, horizon.ReturnLimit = maxHorizon, maxHorizon
+	accept("longest horizon", horizon)
+	horizon.ReturnLimit = maxHorizon + 1
+	refuse("horizon too long", horizon, "MODEL_BOUND")
+}
+
+func TestReachedStateBudget(t *testing.T) {
+	c := chainContract(t, 256, 256)
+	raw := bytesOf(t, c)
+	a, e := NewAuthority(raw, Digest(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	r, e := a.Reachable(t.Context(), c.Start, c.Goal)
+	if e != nil || len(r.States) != maxReachedStates || r.Witness == nil {
+		t.Fatalf("%d states, witness %v, error %v", len(r.States), r.Witness, e)
+	}
+
+	c = chainContract(t, 256, 256, 2)
+	raw = bytesOf(t, c)
+	if a, e = NewAuthority(raw, Digest(raw)); e != nil {
+		t.Fatal(e)
+	}
+	r, e = a.Reachable(t.Context(), c.Start, c.Goal)
+	if !errors.Is(e, ErrStateBudget) || r.Witness != nil || len(r.States) != 0 {
+		t.Fatalf("%+v %v", r, e)
+	}
+	next := maps.Clone(c.Start)
+	next["f00"] = "1"
+	p := Package{SchemaVersion: Version, RequestID: c.RequestID, AuthoritySHA256: Digest(raw), SourceBinding: c.SourceBinding, Assumptions: c.Assumptions, Forward: Trace{States: []State{c.Start, next}, Actions: []string{"f00-0"}}, ReturnKind: "no_return", ClosedStates: []State{}}
+	_, e = a.Validate(t.Context(), c.RequestID, bytesOf(t, p))
+	var rejection *Rejection
+	if !errors.Is(e, ErrStateBudget) || errors.As(e, &rejection) {
+		t.Fatalf("got %v, want a budget error that is not a rejection", e)
+	}
+}
+
+func TestRecordedPackagesKeepReceipts(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "recorded-repair", "model")
+	raw, e := os.ReadFile(filepath.Join(dir, "authority.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	a, e := NewAuthority(raw, Digest(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	bundle, e := os.ReadFile(filepath.Join(dir, "bundle.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var saved struct {
+		RequestID string `json:"request_id"`
+		Paths     []struct {
+			PackageFile string  `json:"package_file"`
+			Receipt     Receipt `json:"receipt"`
+		} `json:"paths"`
+	}
+	if e = json.Unmarshal(bundle, &saved); e != nil {
+		t.Fatal(e)
+	}
+	if len(saved.Paths) == 0 {
+		t.Fatal("no recorded packages")
+	}
+	for _, path := range saved.Paths {
+		pkg, e := os.ReadFile(filepath.Join(dir, path.PackageFile))
+		if e != nil {
+			t.Fatal(e)
+		}
+		got, e := a.Validate(t.Context(), saved.RequestID, pkg)
+		if e != nil || got != path.Receipt {
+			t.Fatalf("%s: got %+v, %v; want %+v", path.PackageFile, got, e, path.Receipt)
+		}
+	}
+}
+
+func TestSessionMatchesValidate(t *testing.T) {
+	c, p := fixture(t)
+	c.Model.Actions = c.Model.Actions[:3]
+	p.ReturnKind, p.Return, p.ClosedStates = "no_return", nil, []State{{"x": "2"}}
+	a := bind(t, c, &p)
+	s := a.NewSession()
+	check := func(p Package) {
+		t.Helper()
+		raw := bytesOf(t, p)
+		want, wantErr := a.Validate(t.Context(), "q", raw)
+		got, gotErr := s.Validate(t.Context(), "q", raw)
+		if got != want || fmt.Sprint(gotErr) != fmt.Sprint(wantErr) {
+			t.Fatalf("session %+v, %v; validate %+v, %v", got, gotErr, want, wantErr)
+		}
+	}
+	check(p)
+	if _, e := s.Validate(t.Context(), "q", bytesOf(t, p)); e != nil {
+		t.Fatal(e)
+	}
+	if len(s.closures) != 2 {
+		t.Fatalf("%d closures after repeating one package, want 2", len(s.closures))
+	}
+
+	// A cached closure must still refuse every wrong certificate.
+	tampered := p
+	tampered.ClosedStates = []State{}
+	check(tampered)
+	tampered.ClosedStates = []State{{"x": "2"}, {"x": "1"}}
+	check(tampered)
+	tampered.Forward = Trace{States: []State{{"x": "0"}, {"x": "1"}, {"x": "2"}}, Actions: []string{"first", "second"}, ClaimShortest: true}
+	check(tampered)
+	check(p)
+}
+
+func TestSessionSeparatesTargetsFromOneStart(t *testing.T) {
+	c, p := fixture(t)
+	c.Baseline = State{"x": "1"}
+	c.Goal = State{"x": "0"}
+	c.Model.Actions = c.Model.Actions[:1]
+	p.Forward = Trace{States: []State{{"x": "0"}}, Actions: []string{}, ClaimShortest: true}
+	p.Return = &Trace{States: []State{{"x": "0"}, {"x": "1"}}, Actions: []string{"first"}, ClaimShortest: true}
+	a := bind(t, c, &p)
+	r, e := a.NewSession().Validate(t.Context(), "q", bytesOf(t, p))
+	if e != nil || r.ForwardShortest != 0 || r.ReturnShortest != 1 {
+		t.Fatalf("%+v %v", r, e)
+	}
 }

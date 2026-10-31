@@ -77,15 +77,16 @@ is generated explicitly with unknown topology.
 | `Bundle.Status` | Meaning |
 |---|---|
 | `FOUND` | Forward paths exist and reached this stage of certification. `Complete` can still be false; inspect per-path results and the returned error. |
-| `NO_PATH_WITHIN_BOUND` | Independent bounded set comparison confirms no submitted forward paths, but original-rule full reachability finds a route outside the bound. |
+| `NO_PATH_WITHIN_BOUND` | Independent bounded set comparison confirms no submitted forward paths, and original-rule full reachability finished and finds a route outside the bound. |
 | `NO_PATH_IN_MODEL` | Bounded enumeration/set comparison and full original-rule reachable closure establish no forward goal in this finite model. Not real-world impossibility. |
-| `INCONCLUSIVE` | Initial outcome or an interruption that prevents a stronger conclusion. |
+| `INCONCLUSIVE` | Initial outcome, or an interruption or exhausted budget that prevents a stronger conclusion. Timeouts and resource limits stay here; they are not `REJECTED`. |
 | `REJECTED` | Detected invalid path, binding, shortest claim, duplicate/extra path, or a claimed complete set that disagrees with the reference. |
 
 Examples: `Search.Status=INCONCLUSIVE` and `Bundle.Status=FOUND` can coexist if
 some forward paths survive but later work failed. `Bundle.Complete=false` keeps
 that result incomplete. `Search.Status=NO_PATH_WITHIN_BOUND` can become bundle
-`NO_PATH_IN_MODEL` only through the separate original-rule closure check.
+`NO_PATH_IN_MODEL` only through the separate original-rule closure check. If
+that check stops at the reached-state budget, the bundle stays `INCONCLUSIVE`.
 Always consume `(Bundle, error)` together; an error can leave intermediate
 fields populated without a final receipt.
 
@@ -94,7 +95,7 @@ fields populated without a final receipt.
 | `PathResult` field | Meaning / values |
 |---|---|
 | `ID` | Correlates with `Search.Forward[].ID`. |
-| `ForwardVerified` | Original-rule replay and any claimed shortest forward cost passed. It says nothing by itself about recovery. |
+| `ForwardVerified` | Original-rule replay passed, and so did any claimed shortest forward cost unless `Reason` is `STATE_BUDGET_EXHAUSTED`. It says nothing by itself about recovery. |
 | `RecoveryStatus` | `RETURN_VERIFIED`, `NO_RETURN_IN_MODEL`, or `UNKNOWN`. |
 | `Return` | Separately searched recovery trace when present, otherwise nil. A zero-action trace differs from nil. |
 | `PackageFile` | Relative certificate file, set when written after validation. Empty/omitted if none was saved. |
@@ -113,13 +114,16 @@ conclusion without the receipt.
 | `RETURN_EXISTS_BEYOND_SEARCH_BOUND` | The bounded SAT return search missed, but the original-rule evaluator found a longer route. It is not substituted into the requested query. |
 | `RETURN_SEARCH_INCOMPLETE` | The referenced return entry did not supply a conclusive recognized result. |
 | `RETURN_SEARCH_NOT_COMPLETED` | No valid return entry index was available for the path. |
+| `STATE_BUDGET_EXHAUSTED` | Original-rule reachability stopped at the reached-state budget, so no receipt was issued. The forward replay still passed, but a claimed shortest cost was not checked. This says nothing about whether recovery exists. |
+| `PACKAGE_SIZE_LIMIT` | The certificate exceeds the 4 MiB package limit, so no package or receipt exists. A finished closure can still be saved in `ClosureFile`. |
 | Empty / omitted | No unknown-recovery explanation recorded; not proof of acceptance. |
 
 `Diagnostics` currently uses `REFERENCE_SET_INCOMPLETE`,
 `PATH_SET_MISMATCH`, `REFERENCE_REACHABILITY_INCOMPLETE`, and
 `RUN_NOT_FULLY_VERIFIED`. Respectively these mean unfinished independent DFS,
-disagreement with a claimed complete set, unfinished original-rule reachability,
-and a bundle that did not reach complete certification.
+disagreement with a claimed complete set, unfinished original-rule reachability
+(including the reached-state budget), and a bundle that did not reach complete
+certification.
 
 `SetCheck.Complete` records finished reference enumeration; `Matches` records
 set equality. `ReferencePaths` and `SubmittedPaths` count paths;

@@ -39,6 +39,8 @@ conversion between the two commands.
 After authority loading, a semantic package refusal from `verify` emits
 `{status: "REJECTED", reason: <validation rejection code>}` and exits 1.
 Authority-load rejection exits 1 with stderr, without that JSON envelope.
+Reaching the reached-state budget is not a refusal: `verify` reports it on stderr
+and exits 2, with no receipt.
 
 ## AHE wrapper statuses
 

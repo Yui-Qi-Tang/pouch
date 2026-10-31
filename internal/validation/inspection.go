@@ -43,6 +43,7 @@ func (a *Authority) ReplayForward(ctx context.Context, trace Trace) (State, erro
 
 // Reachability is the complete finite closure from one original-rule state.
 // Witness is nil exactly when the goal is unreachable after successful analysis.
+// An error, including ErrStateBudget, carries no reachability conclusion.
 type Reachability struct {
 	States   []State `json:"states"`
 	Shortest int     `json:"shortest"`
@@ -78,6 +79,9 @@ func (a *Authority) Reachable(ctx context.Context, start, goal State) (Reachabil
 			key := a.key(next)
 			if _, exists := seen[key]; exists {
 				continue
+			}
+			if len(queue) == maxReachedStates {
+				return r, ErrStateBudget
 			}
 			seen[key] = len(queue)
 			queue = append(queue, next)
