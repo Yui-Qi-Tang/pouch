@@ -77,9 +77,17 @@ and 1,000,000 clauses per formula. The quadratic nonrepetition encoding is
 estimated before allocating time-indexed rows. The runner defaults to 30 seconds
 per query, shared by the solver and checker, 16 MiB per output stream and a
 64 MiB proof check limit. `solve --query-timeout` sets that shared budget and
-defaults to 10 seconds. Calx also limits each query to 4,000,000 literals and
-16 MiB for each of `input.cnf` and `input.json`. The proof size limit is checked
-after solver exit; it is not a filesystem quota.
+defaults to 10 seconds. `--max-output-bytes` and `--max-proof-bytes` set the
+output and proof limits for `solve` and `solve-automaton`. Calx also limits each
+query to 4,000,000 literals and 16 MiB for each of `input.cnf` and `input.json`.
+The proof size limit is checked after solver exit; it is not a filesystem quota.
+A proof over it is not given to DRAT-trim. The query keeps the solver's answer
+with `verified: false`, which is not a checked UNSAT, and the run is
+`INCONCLUSIVE`.
+
+A query error over a limit names its kind with a fixed message:
+`resolver limit exceeded: input`, `: tool output`, `: proof size` or
+`: executable size`. These messages name no host path.
 
 At the exact forward path cap, another query is allowed to establish exhaustion.
 If that query finds another path, the preserved set is partial and the call

@@ -80,6 +80,37 @@ func pinnedTool(t *testing.T, body string) (string, string) {
 	return path, validation.Digest(raw)
 }
 
+// A proof over --max-proof-bytes leaves the search inconclusive and names the
+// limit, rather than the 64 MiB default deciding.
+func TestSolveProofLimit(t *testing.T) {
+	fixture := filepath.Join("..", "..", "testdata", "django-13344")
+	authority := filepath.Join(fixture, "authority.json")
+	raw, err := os.ReadFile(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract validation.Contract
+	if err := json.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	solver, solverHash := pinnedTool(t, "printf '1 0\\n' > proof.drat; echo 's UNSATISFIABLE'; exit 20")
+	checker, checkerHash := pinnedTool(t, "echo 's VERIFIED'; exit 0")
+	dir := filepath.Join(t.TempDir(), "run")
+	var out, errs bytes.Buffer
+	Run(context.Background(), []string{"solve", "--authority", authority, "--authority-sha256", validation.Digest(raw), "--request-id", contract.RequestID, "--sources", filepath.Join(fixture, "sources.json"), "--solver", solver, "--solver-sha256", solverHash, "--checker", checker, "--checker-sha256", checkerHash, "--out", dir, "--max-proof-bytes", "3"}, &out, &errs)
+	saved, err := os.ReadFile(filepath.Join(dir, "bundle.json"))
+	if err != nil {
+		t.Fatalf("%v: %s", err, errs.String())
+	}
+	var bundle run.Bundle
+	if err := json.Unmarshal(saved, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Search.Error != "resolver limit exceeded: proof size" || bundle.Complete {
+		t.Fatalf("search %q, complete %v", bundle.Search.Error, bundle.Complete)
+	}
+}
+
 func TestSearchTimeoutLeavesTimeToCertify(t *testing.T) {
 	fixture := filepath.Join("..", "..", "testdata", "django-13344")
 	authority := filepath.Join(fixture, "authority.json")

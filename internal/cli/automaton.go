@@ -60,11 +60,13 @@ func solveAutomaton(ctx context.Context, args []string, out, errout io.Writer) i
 	maxClauses := f.Int("max-clauses", 1000000, "clauses per formula")
 	maxLiterals := f.Int("max-literals", 4000000, "literals per formula")
 	maxInputBytes := f.Int("max-input-bytes", 16<<20, "bytes of each saved formula file")
+	maxOutputBytes := f.Int64("max-output-bytes", 16<<20, "bytes of each solver and checker output stream")
+	maxProofBytes := f.Int64("max-proof-bytes", 64<<20, "bytes of a DRAT proof; a larger proof is not checked")
 	maxOrbitSteps := f.Int("max-orbit-steps", 100000, "steps walked to confirm a choice-free run")
 	if e := f.Parse(args); e != nil {
 		return 2
 	}
-	if f.NArg() != 0 || *authority == "" || *hash == "" || *request == "" || *sources == "" || *dir == "" || *timeout <= 0 || *queryTimeout <= 0 || *maxQueries <= 0 || *maxVariables <= 0 || *maxClauses <= 0 || *maxLiterals <= 0 || *maxInputBytes <= 0 || *maxOrbitSteps <= 0 {
+	if f.NArg() != 0 || *authority == "" || *hash == "" || *request == "" || *sources == "" || *dir == "" || *timeout <= 0 || *queryTimeout <= 0 || *maxQueries <= 0 || *maxVariables <= 0 || *maxClauses <= 0 || *maxLiterals <= 0 || *maxInputBytes <= 0 || *maxOutputBytes <= 0 || *maxProofBytes <= 0 || *maxOrbitSteps <= 0 {
 		fmt.Fprintln(errout, "required inputs or limits missing")
 		return 2
 	}
@@ -98,7 +100,7 @@ func solveAutomaton(ctx context.Context, args []string, out, errout io.Writer) i
 		fmt.Fprintln(errout, e)
 		return 2
 	}
-	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout, MaxVariables: *maxVariables, MaxClauses: *maxClauses, MaxLiterals: *maxLiterals, MaxInputBytes: *maxInputBytes})
+	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout, MaxVariables: *maxVariables, MaxClauses: *maxClauses, MaxLiterals: *maxLiterals, MaxInputBytes: *maxInputBytes, MaxOutputBytes: *maxOutputBytes, MaxProofBytes: *maxProofBytes})
 	if e != nil {
 		fmt.Fprintln(errout, e)
 		return 2

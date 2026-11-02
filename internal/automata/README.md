@@ -137,6 +137,8 @@ would first need a Calx change.
 | `--max-clauses` | Clauses per formula | 1,000,000 |
 | `--max-literals` | Literals per formula | 4,000,000 |
 | `--max-input-bytes` | Bytes of each of `input.cnf` and `input.json` | 16 MiB |
+| `--max-output-bytes` | Bytes of each solver and checker output stream | 16 MiB |
+| `--max-proof-bytes` | Bytes of a DRAT proof; a larger one is not checked | 64 MiB |
 | `--max-orbit-steps` | Steps walked to confirm a choice-free run | 100,000 |
 
 Raising these changes what can be attempted, not what a result means. Exceeding one

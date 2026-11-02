@@ -116,10 +116,12 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	queryTimeout := f.Duration("query-timeout", 10*time.Second, "budget shared by the solver and checker of one query")
 	maxPaths := f.Int("max-paths", 1000, "forward path resource limit")
 	maxQueries := f.Int("max-queries", 10000, "solver call resource limit")
+	maxOutputBytes := f.Int64("max-output-bytes", 16<<20, "bytes of each solver and checker output stream")
+	maxProofBytes := f.Int64("max-proof-bytes", 64<<20, "bytes of a DRAT proof; a larger proof is not checked")
 	if e := f.Parse(args); e != nil {
 		return 2
 	}
-	if f.NArg() != 0 || *authority == "" || *hash == "" || *request == "" || *sources == "" || *dir == "" || *timeout <= 0 || *queryTimeout <= 0 || *maxPaths <= 0 || *maxQueries <= 0 {
+	if f.NArg() != 0 || *authority == "" || *hash == "" || *request == "" || *sources == "" || *dir == "" || *timeout <= 0 || *queryTimeout <= 0 || *maxPaths <= 0 || *maxQueries <= 0 || *maxOutputBytes <= 0 || *maxProofBytes <= 0 {
 		fmt.Fprintln(errout, "required inputs or limits missing")
 		return 2
 	}
@@ -199,7 +201,7 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
-	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout})
+	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout, MaxOutputBytes: *maxOutputBytes, MaxProofBytes: *maxProofBytes})
 	if e != nil {
 		fmt.Fprintln(errout, e)
 		return 2

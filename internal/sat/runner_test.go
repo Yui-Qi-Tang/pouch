@@ -146,7 +146,55 @@ func TestFormulaLimitKeepsItsCategory(t *testing.T) {
 	}
 	formula := calxsat.CNF{Variables: []calxsat.Variable{{ID: 1}}, Clauses: [][]int{{1}, {1}}}
 	got, err := r.Solve(context.Background(), "q000000", formula)
-	if !errors.Is(err, calxsat.ErrLimit) || got.Verified || got.Status != "INCONCLUSIVE" || got.Assignment != nil {
+	if !errors.Is(err, calxsat.ErrInputLimit) || got.Verified || got.Status != "INCONCLUSIVE" || got.Assignment != nil {
 		t.Fatalf("%+v %v", got, err)
+	}
+}
+
+// A configured proof limit must reach Calx. A proof over it keeps the solver's
+// unchecked answer, which is not a checked UNSAT; one within it is checked.
+func TestProofLimitIsConfigured(t *testing.T) {
+	solver, solverHash := pinnedScript(t, "printf '1 0\\n' > proof.drat; echo 's UNSATISFIABLE'; exit 20")
+	checker, checkerHash := pinnedScript(t, "echo 's VERIFIED'; exit 0")
+	for _, tc := range []struct {
+		limit    int64
+		verified bool
+	}{{3, false}, {4, true}} {
+		r, err := New(Config{SolverPath: solver, SolverSHA256: solverHash, CheckerPath: checker, CheckerSHA256: checkerHash, ArtifactDir: filepath.Join(t.TempDir(), "evidence"), MaxProofBytes: tc.limit})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := r.Solve(context.Background(), "q000000", tinyCNF())
+		if got.Status != "UNSAT" || got.Verified != tc.verified {
+			t.Fatalf("limit %d: %+v %v", tc.limit, got, err)
+		}
+		if !tc.verified && (!errors.Is(err, calxsat.ErrProofLimit) || err.Error() != "resolver limit exceeded: proof size") {
+			t.Fatalf("limit %d: %v", tc.limit, err)
+		}
+		if tc.verified && err != nil {
+			t.Fatalf("limit %d: %v", tc.limit, err)
+		}
+	}
+}
+
+func TestOutputLimitIsConfigured(t *testing.T) {
+	solver, solverHash := pinnedScript(t, "echo 's SATISFIABLE'; echo 'v 1 0'; exit 10")
+	checker, checkerHash := pinnedScript(t, "exit 1")
+	r, err := New(Config{SolverPath: solver, SolverSHA256: solverHash, CheckerPath: checker, CheckerSHA256: checkerHash, ArtifactDir: filepath.Join(t.TempDir(), "evidence"), MaxOutputBytes: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := r.Solve(context.Background(), "q000000", tinyCNF())
+	if !errors.Is(err, calxsat.ErrOutputLimit) || err.Error() != "resolver limit exceeded: tool output" || got.Verified {
+		t.Fatalf("%+v %v", got, err)
+	}
+}
+
+// Each limit kind keeps its fixed message, never the wrapped detail.
+func TestLimitKindsArePortable(t *testing.T) {
+	for _, kind := range []error{calxsat.ErrInputLimit, calxsat.ErrOutputLimit, calxsat.ErrProofLimit, calxsat.ErrExecutableLimit, calxsat.ErrLimit} {
+		if got := portable(fmt.Errorf("/private/run/q0: %w", kind)); got != kind {
+			t.Fatalf("%v became %v", kind, got)
+		}
 	}
 }

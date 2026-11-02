@@ -80,9 +80,12 @@ func (r *Runner) Solve(ctx context.Context, id string, cnf calxsat.CNF) (plannin
 }
 
 // portable reduces a Calx error to its category. Its messages can name host
-// paths, and query errors are saved in shareable bundles.
+// paths, and query errors are saved in shareable bundles. Limit kinds come
+// before ErrLimit, which they wrap, so a saved error names the limit hit.
+// They also come before cancellation, because Calx cancels a tool whose
+// output exceeds its limit.
 func portable(err error) error {
-	for _, category := range []error{context.DeadlineExceeded, context.Canceled, calxsat.ErrLimit, calxsat.ErrInput, calxsat.ErrProtocol, calxsat.ErrValidation, calxsat.ErrInconclusive, calxsat.ErrGuarantee} {
+	for _, category := range []error{calxsat.ErrInputLimit, calxsat.ErrOutputLimit, calxsat.ErrProofLimit, calxsat.ErrExecutableLimit, calxsat.ErrLimit, context.DeadlineExceeded, context.Canceled, calxsat.ErrInput, calxsat.ErrProtocol, calxsat.ErrValidation, calxsat.ErrInconclusive, calxsat.ErrGuarantee} {
 		if errors.Is(err, category) {
 			return category
 		}

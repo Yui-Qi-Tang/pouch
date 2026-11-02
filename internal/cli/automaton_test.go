@@ -56,6 +56,28 @@ func TestSolveAutomatonWithPinnedTools(t *testing.T) {
 	if solver == "" || checker == "" {
 		t.Skip("set POUCH_TEST_CADICAL and POUCH_TEST_DRAT_TRIM with their SHA256 pins for real tool integration")
 	}
+	dir, digest := automatonInputs(t)
+	result := filepath.Join(dir, "result")
+	var out, errs bytes.Buffer
+	if got := Run(context.Background(), []string{"solve-automaton", "--authority", filepath.Join(dir, "authority.json"), "--authority-sha256", digest, "--request-id", "merge", "--sources", filepath.Join(dir, "sources.json"), "--out", result, "--solver", solver, "--solver-sha256", os.Getenv("POUCH_TEST_CADICAL_SHA256"), "--checker", checker, "--checker-sha256", os.Getenv("POUCH_TEST_DRAT_TRIM_SHA256")}, &out, &errs); got != 0 {
+		t.Fatalf("exit %d: %s", got, errs.String())
+	}
+	raw, err := os.ReadFile(filepath.Join(result, "bundle.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bundle automata.Bundle
+	if err := json.Unmarshal(raw, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Status != "FOUND" || !bundle.ForwardVerified || bundle.RecoveryStatus != "NO_RETURN_IN_MODEL" || !bundle.Complete {
+		t.Fatalf("%+v", bundle)
+	}
+}
+
+// automatonInputs writes a two-cell authority and its source manifest.
+func automatonInputs(t *testing.T) (string, string) {
+	t.Helper()
 	dir := t.TempDir()
 	source := []byte("synthetic rule\n")
 	sourceDigest := validation.Digest(source)
@@ -76,21 +98,32 @@ func TestSolveAutomatonWithPinnedTools(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	result := filepath.Join(dir, "result")
-	var out, errs bytes.Buffer
-	if got := Run(context.Background(), []string{"solve-automaton", "--authority", filepath.Join(dir, "authority.json"), "--authority-sha256", digest, "--request-id", "merge", "--sources", filepath.Join(dir, "sources.json"), "--out", result, "--solver", solver, "--solver-sha256", os.Getenv("POUCH_TEST_CADICAL_SHA256"), "--checker", checker, "--checker-sha256", os.Getenv("POUCH_TEST_DRAT_TRIM_SHA256")}, &out, &errs); got != 0 {
-		t.Fatalf("exit %d: %s", got, errs.String())
-	}
-	raw, err := os.ReadFile(filepath.Join(result, "bundle.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var bundle automata.Bundle
-	if err := json.Unmarshal(raw, &bundle); err != nil {
-		t.Fatal(err)
-	}
-	if bundle.Status != "FOUND" || !bundle.ForwardVerified || bundle.RecoveryStatus != "NO_RETURN_IN_MODEL" || !bundle.Complete {
-		t.Fatalf("%+v", bundle)
+	return dir, digest
+}
+
+// A proof over --max-proof-bytes leaves the run inconclusive and names the
+// limit; at the limit it is checked. The fake checker accepts any proof.
+func TestSolveAutomatonProofLimit(t *testing.T) {
+	solver, solverHash := pinnedTool(t, "printf '1 0\\n' > proof.drat; echo 's UNSATISFIABLE'; exit 20")
+	checker, checkerHash := pinnedTool(t, "echo 's VERIFIED'; exit 0")
+	for _, tc := range []struct {
+		limit, status, err string
+	}{{"3", "INCONCLUSIVE", "resolver limit exceeded: proof size"}, {"4", "NO_PATH_WITHIN_BOUND", ""}} {
+		dir, digest := automatonInputs(t)
+		result := filepath.Join(dir, "result")
+		var out, errs bytes.Buffer
+		Run(context.Background(), []string{"solve-automaton", "--authority", filepath.Join(dir, "authority.json"), "--authority-sha256", digest, "--request-id", "merge", "--sources", filepath.Join(dir, "sources.json"), "--out", result, "--solver", solver, "--solver-sha256", solverHash, "--checker", checker, "--checker-sha256", checkerHash, "--max-proof-bytes", tc.limit}, &out, &errs)
+		raw, err := os.ReadFile(filepath.Join(result, "bundle.json"))
+		if err != nil {
+			t.Fatalf("limit %s: %v: %s", tc.limit, err, errs.String())
+		}
+		var bundle automata.Bundle
+		if err := json.Unmarshal(raw, &bundle); err != nil {
+			t.Fatal(err)
+		}
+		if bundle.Search.Status != tc.status || bundle.Search.Error != tc.err {
+			t.Fatalf("limit %s: status %s, error %q", tc.limit, bundle.Search.Status, bundle.Search.Error)
+		}
 	}
 }
 
