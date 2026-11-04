@@ -22,7 +22,7 @@ const (
 	maxFanIn          = 12
 	maxRules          = 256
 	maxSteps          = 4095
-	maxSourceBindings = 32
+	maxSourceBindings = 64
 )
 
 // Rule is the truth table of one cell kind. Table holds the output bits of every
@@ -99,8 +99,11 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 	if err := validation.Decode(raw, &c); err != nil {
 		return nil, err
 	}
-	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 || len(c.SourceBinding) > maxSourceBindings {
+	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 {
 		return nil, reject("AUTHORITY_CONTRACT")
+	}
+	if len(c.SourceBinding) > maxSourceBindings {
+		return nil, reject("SOURCE_BINDING_LIMIT")
 	}
 	for id, digest := range c.SourceBinding {
 		if id == "" || len(id) > 200 || !validDigest(digest) {

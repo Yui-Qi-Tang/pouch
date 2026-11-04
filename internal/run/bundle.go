@@ -68,7 +68,9 @@ func Certify(ctx context.Context, in Inputs, result planning.Result, outputDir s
 	for i, p := range result.Forward {
 		traces[i] = p.Trace
 	}
-	check, setErr := in.Authority.CheckSet(ctx, traces, 10000, 1000000)
+	// The reference set may hold as many paths as the search was allowed to
+	// find, so a complete search above 10,000 paths can still be compared.
+	check, setErr := in.Authority.CheckSet(ctx, traces, max(result.Options.MaxPaths, 10000), 1000000)
 	b.SetCheck = check
 	if setErr != nil {
 		b.Diagnostics = append(b.Diagnostics, "REFERENCE_SET_INCOMPLETE")

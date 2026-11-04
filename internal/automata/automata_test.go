@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"strings"
@@ -224,14 +225,19 @@ func TestAuthorityRejections(t *testing.T) {
 	cases := map[string]func(*Contract){
 		"AUTHORITY_CONTRACT": func(c *Contract) { c.SchemaVersion = "pouch-automaton/v0" },
 		"SOURCE_BINDING":     func(c *Contract) { c.SourceBinding["synthetic:rules"] = "bad" },
-		"MODEL_BOUND":        func(c *Contract) { c.ForwardLimit = maxSteps + 1 },
-		"RULE_FAN_IN":        func(c *Contract) { c.Model.Rules[0].Inputs = maxFanIn + 1 },
-		"RULE_TABLE":         func(c *Contract) { c.Model.Rules[0].Table += "00" },
-		"CELL_RULE":          func(c *Contract) { c.Model.Cells[0].Rule = 1 },
-		"CELL_INPUT":         func(c *Contract) { c.Model.Cells[0].Inputs[0] = 16 },
-		"STATE_ENCODING":     func(c *Contract) { c.Start = strings.ToUpper("ff") + c.Start[2:] },
-		"GOAL_PATTERN":       func(c *Contract) { c.Goal = Pattern{Mask: "0000", Value: "0000"} },
-		"DISPLAY":            func(c *Contract) { c.Display.Columns = 3 },
+		"SOURCE_BINDING_LIMIT": func(c *Contract) {
+			for i := range 64 {
+				c.SourceBinding[fmt.Sprintf("synthetic:extra%d", i)] = strings.Repeat("a", 64)
+			}
+		},
+		"MODEL_BOUND":    func(c *Contract) { c.ForwardLimit = maxSteps + 1 },
+		"RULE_FAN_IN":    func(c *Contract) { c.Model.Rules[0].Inputs = maxFanIn + 1 },
+		"RULE_TABLE":     func(c *Contract) { c.Model.Rules[0].Table += "00" },
+		"CELL_RULE":      func(c *Contract) { c.Model.Cells[0].Rule = 1 },
+		"CELL_INPUT":     func(c *Contract) { c.Model.Cells[0].Inputs[0] = 16 },
+		"STATE_ENCODING": func(c *Contract) { c.Start = strings.ToUpper("ff") + c.Start[2:] },
+		"GOAL_PATTERN":   func(c *Contract) { c.Goal = Pattern{Mask: "0000", Value: "0000"} },
+		"DISPLAY":        func(c *Contract) { c.Display.Columns = 3 },
 	}
 	for code, mutate := range cases {
 		var c Contract

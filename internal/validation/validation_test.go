@@ -151,7 +151,7 @@ func TestAuthorityModelBounds(t *testing.T) {
 }
 
 func TestAuthoritySourceBindingBounds(t *testing.T) {
-	for _, count := range []int{0, 1, 8, 9, 12, 32, 33} {
+	for _, count := range []int{0, 1, 8, 9, 12, 32, 33, 64, 65} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			c, p := fixture(t)
 			c.SourceBinding = map[string]string{}
@@ -161,8 +161,12 @@ func TestAuthoritySourceBindingBounds(t *testing.T) {
 			}
 			raw := bytesOf(t, c)
 			a, err := NewAuthority(raw, Digest(raw))
-			if count == 0 || count == 33 {
+			if count == 0 {
 				code(t, err, "AUTHORITY_CONTRACT")
+				return
+			}
+			if count == 65 {
+				code(t, err, "SOURCE_BINDING_LIMIT")
 				return
 			}
 			if err != nil {

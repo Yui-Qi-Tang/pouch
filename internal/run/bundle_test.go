@@ -314,3 +314,49 @@ func TestExpandedSourceManifest(t *testing.T) {
 		t.Fatal("changed source bytes accepted")
 	}
 }
+
+// The reference set check may hold as many paths as the search was allowed to
+// find. Seven setters and a finish action give 13,700 first-hit paths, above
+// the default 10,000. No path is submitted, so a complete comparison finds them
+// all missing and stops before per-path work.
+func TestReferenceSetFollowsMaxPaths(t *testing.T) {
+	fields := map[string][]string{"g": {"0", "1"}}
+	all := []string{"g"}
+	for i := range 7 {
+		f := fmt.Sprintf("t%d", i)
+		fields[f] = []string{"0", "1"}
+		all = append(all, f)
+	}
+	except := func(f string) []string {
+		return slices.DeleteFunc(slices.Clone(all), func(x string) bool { return x == f })
+	}
+	actions := []validation.Action{{ID: "finish", Guard: validation.State{"g": "0"}, Effect: validation.State{"g": "1"}, Frame: except("g")}}
+	start := validation.State{"g": "0"}
+	for _, f := range all[1:] {
+		start[f] = "0"
+		actions = append(actions, validation.Action{ID: "set-" + f, Guard: validation.State{f: "0"}, Effect: validation.State{f: "1"}, Frame: except(f)})
+	}
+	c := validation.Contract{SchemaVersion: validation.Version, RequestID: "q", SourceBinding: map[string]string{"source:1": validation.Digest([]byte("rule"))}, Assumptions: map[string]string{}, Model: validation.Model{Fields: fields, Forbidden: []validation.State{}, Actions: actions}, Start: start, Goal: validation.State{"g": "1"}, Baseline: start, ForwardLimit: 8, ReturnLimit: 0}
+	raw, e := json.Marshal(c)
+	if e != nil {
+		t.Fatal(e)
+	}
+	a, e := validation.NewAuthority(raw, validation.Digest(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	in := Inputs{Authority: a, AuthorityRaw: raw, Content: map[string][]byte{"source:1": []byte("rule")}}
+	for _, tc := range []struct {
+		maxPaths, reference int
+		complete            bool
+	}{{0, 10000, false}, {10000, 10000, false}, {20000, 13700, true}} {
+		r := planning.Result{ForwardComplete: true, Complete: true, Options: planning.Options{MaxPaths: tc.maxPaths}}
+		b, _ := Certify(t.Context(), in, r, t.TempDir())
+		if b.SetCheck.Complete != tc.complete || b.SetCheck.ReferencePaths != tc.reference {
+			t.Fatalf("max paths %d: %+v", tc.maxPaths, b.SetCheck)
+		}
+		if tc.complete && (b.SetCheck.Missing != 13700 || b.Status != "REJECTED") {
+			t.Fatalf("max paths %d: %s %+v", tc.maxPaths, b.Status, b.SetCheck)
+		}
+	}
+}

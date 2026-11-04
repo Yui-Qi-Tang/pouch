@@ -15,7 +15,7 @@ solve` does not accept this schema.
 |---|---|
 | `schema_version` | `pouch-automaton/v1`. |
 | `request_id` | Caller-selected nonempty identity, at most 200 bytes. |
-| `source_binding` | 1–32 source IDs mapped to exact-content SHA-256 strings. |
+| `source_binding` | 1–64 source IDs mapped to exact-content SHA-256 strings. |
 | `assumptions` | Explicit string-to-string declarations; may be empty, not absent. |
 | `model.bits` | State bits per cell, 1–16. |
 | `model.rules` | 1–256 rule tables. |

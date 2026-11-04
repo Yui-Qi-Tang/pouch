@@ -190,8 +190,10 @@ Pouch checks all authority sources before starting SAT. After search it calls
 `check_current_evidence_plan` for every distinct action emitted in all forward
 and recovery traces, using the pinned mapping. Repeated occurrences of one model
 action share its fixed mapping. There is no union of separate snapshot passes:
-the authority has at most 32 sources and all declared action bases fit one final
-native request. This optional mode does not inject provider code into the finite
+a governed authority has at most 32 sources, Pouch's limit for one native
+request, and all declared action bases fit one final native request. An
+authority with 33–64 sources still runs offline, but loading its
+`--action-basis` fails. This optional mode does not inject provider code into the finite
 model or solver. Offline `solve` still works without AHE and claims no AHE check.
 
 The portable output retains exact `action-basis.json` and

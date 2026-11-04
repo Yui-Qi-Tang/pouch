@@ -14,7 +14,7 @@ import (
 
 const Version = "pouch-finite-validation/v1"
 const MaxBytes = 4 << 20
-const maxSourceBindings = 32
+const maxSourceBindings = 64
 
 // Model limits stay within the Calx finite encoder, so an unsupported model is
 // refused here instead of failing during search. maxFields is lower than Calx
@@ -136,8 +136,11 @@ func NewAuthority(raw []byte, expected string) (*Authority, error) {
 	if err := decode(raw, &c); err != nil {
 		return nil, err
 	}
-	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 || len(c.SourceBinding) > maxSourceBindings {
+	if c.SchemaVersion != Version || c.RequestID == "" || len(c.RequestID) > 200 || len(c.SourceBinding) == 0 {
 		return nil, reject("AUTHORITY_CONTRACT")
+	}
+	if len(c.SourceBinding) > maxSourceBindings {
+		return nil, reject("SOURCE_BINDING_LIMIT")
 	}
 	for id, hash := range c.SourceBinding {
 		if id == "" || len(id) > 200 || !hashValid(hash) {
