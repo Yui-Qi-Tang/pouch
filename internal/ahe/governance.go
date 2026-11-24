@@ -101,15 +101,27 @@ func (b *Basis) Policy() string { return b.manifest.UsePolicy }
 // GovernanceCheck retains the authoritative response, including native reasons.
 // It is a historical read, never permission for future execution or admission.
 type GovernanceCheck struct {
-	Status         string          `json:"status"`
-	Failure        string          `json:"failure,omitempty"`
-	PackageSHA256  string          `json:"package_sha256,omitempty"`
-	Tool           string          `json:"tool"`
-	Policy         string          `json:"policy"`
-	BasisSHA256    string          `json:"basis_sha256,omitempty"`
-	Raw            []byte          `json:"raw_response_base64,omitempty"`
-	Assessment     json.RawMessage `json:"assessment,omitempty"`
-	ResponseSHA256 string          `json:"response_sha256,omitempty"`
+	Status        string          `json:"status"`
+	Failure       string          `json:"failure,omitempty"`
+	PackageSHA256 string          `json:"package_sha256,omitempty"`
+	Tool          string          `json:"tool"`
+	Policy        string          `json:"policy"`
+	BasisSHA256   string          `json:"basis_sha256,omitempty"`
+	Raw           []byte          `json:"raw_response_base64,omitempty"`
+	Assessment    json.RawMessage `json:"assessment,omitempty"`
+	// IneligibleNodes is a readable copy derived from Assessment. It never
+	// replaces the raw response and does not affect the status.
+	IneligibleNodes []IneligibleNode `json:"ineligible_nodes,omitempty"`
+	ResponseSHA256  string           `json:"response_sha256,omitempty"`
+}
+
+// IneligibleNode names one assessed node that is not eligible, with the reason
+// codes AHE reported for it. See AHE's docs/CURRENT_USE_GUIDANCE.md, "Reason
+// code reference", for what each code means and the governed next step.
+type IneligibleNode struct {
+	NodeID      string   `json:"node_id"`
+	Outcome     string   `json:"outcome"`
+	ReasonCodes []string `json:"reason_codes"`
 }
 
 type useAssessment struct {
@@ -121,7 +133,27 @@ type useAssessment struct {
 	Nodes             []struct {
 		NodeID  string `json:"node_id"`
 		Outcome string `json:"outcome"`
+		Reasons []struct {
+			Code string `json:"code"`
+		} `json:"reasons"`
 	} `json:"nodes"`
+}
+
+// ineligible lists the nodes whose outcome is not "eligible", in AHE's order.
+// Call it only on an assessment that eligible has already validated.
+func (a useAssessment) ineligible() []IneligibleNode {
+	var out []IneligibleNode
+	for _, n := range a.Nodes {
+		if n.Outcome == "eligible" {
+			continue
+		}
+		codes := []string{}
+		for _, r := range n.Reasons {
+			codes = append(codes, r.Code)
+		}
+		out = append(out, IneligibleNode{NodeID: n.NodeID, Outcome: n.Outcome, ReasonCodes: codes})
+	}
+	return out
 }
 
 func validPolicy(p string) bool { return p == CurrentActionPolicy || p == GroundedActionPolicy }
@@ -228,6 +260,7 @@ func CheckSources(ctx context.Context, query *Profile, policy string, ids []stri
 	if err != nil {
 		return checkFailure(c, err)
 	}
+	c.IneligibleNodes = response.Assessment.ineligible()
 	return finishCheck(c, ok)
 }
 
@@ -315,6 +348,7 @@ func (b *Basis) CheckActions(ctx context.Context, query *Profile, emitted []stri
 	if err != nil {
 		return checkFailure(c, err)
 	}
+	c.IneligibleNodes = response.Assessment.ineligible()
 	if *response.Accepted && !ok {
 		return checkFailure(c, errors.New("accepted plan has ineligible basis"))
 	}

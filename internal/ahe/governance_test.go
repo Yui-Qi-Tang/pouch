@@ -52,7 +52,7 @@ func governanceStub(policy string, ids []string, actions []ActionBasis, mode str
 	slices.Sort(ids)
 	ids = slices.Compact(ids)
 	nodes := []any{}
-	ok := !slices.Contains([]string{"withdrawn", "contradicted", "source-failed", "unknown", "historical_derivation", "unknown_derivation_use_class"}, mode)
+	ok := !slices.Contains([]string{"withdrawn", "contradicted", "source-failed", "unknown", "historical_derivation", "unknown_derivation_use_class", "unclassified_currentness"}, mode)
 	for _, id := range ids {
 		outcome := "eligible"
 		if !ok {
@@ -281,5 +281,52 @@ func TestSchemaRepinningDoesNotSupplyPolicy(t *testing.T) {
 	var native *ToolError
 	if !errors.As(err, &native) {
 		t.Fatal("repinning unexpectedly made an old request valid", err)
+	}
+}
+
+// The readable list is a copy of the assessment: it names each non-eligible
+// node with AHE's reason codes and leaves the raw response and status alone.
+func TestIneligibleNodesNameNodeAndReason(t *testing.T) {
+	c, _ := testClient(t, "unclassified_currentness")
+	q := testProfile(t, c, ProfileQuery, "get_evidence_use_state")
+	check, err := CheckSources(t.Context(), q, CurrentActionPolicy, []string{"canon-node:basis"})
+	if !errors.Is(err, ErrGovernanceRejected) || check.Status != "GOVERNANCE_REJECTED" {
+		t.Fatal(check, err)
+	}
+	want := []IneligibleNode{{NodeID: "canon-node:basis", Outcome: "blocked", ReasonCodes: []string{"unclassified_currentness"}}}
+	if !slices.EqualFunc(check.IneligibleNodes, want, func(a, b IneligibleNode) bool {
+		return a.NodeID == b.NodeID && a.Outcome == b.Outcome && slices.Equal(a.ReasonCodes, b.ReasonCodes)
+	}) {
+		t.Fatal(check.IneligibleNodes)
+	}
+	if check.ResponseSHA256 != validation.Digest(check.Raw) || !strings.Contains(string(check.Assessment), "unclassified_currentness") {
+		t.Fatal("raw response or assessment lost")
+	}
+
+	for _, mode := range []string{"", "projection-v2"} {
+		c, _ := testClient(t, mode)
+		q := testProfile(t, c, ProfileQuery, "get_evidence_use_state")
+		check, err := CheckSources(t.Context(), q, CurrentActionPolicy, []string{"canon-node:basis"})
+		if err != nil || check.Status != "GOVERNANCE_ACCEPTED" || len(check.IneligibleNodes) != 0 {
+			t.Fatal(mode, check, err)
+		}
+	}
+}
+
+func TestIneligibleListsOnlyNonEligibleNodes(t *testing.T) {
+	raw := `{"nodes":[
+		{"node_id":"canon-node:ok","outcome":"eligible","reasons":[]},
+		{"node_id":"canon-node:blocked","outcome":"blocked","reasons":[{"code":"unclassified_currentness","related_id":"canon-node:blocked"},{"code":"missing_node"}]},
+		{"node_id":"canon-node:gone","outcome":"excluded"}]}`
+	var a useAssessment
+	if err := decodeGovernance([]byte(raw), &a, false); err != nil {
+		t.Fatal(err)
+	}
+	got := a.ineligible()
+	if len(got) != 2 || got[0].NodeID != "canon-node:blocked" || got[0].Outcome != "blocked" || !slices.Equal(got[0].ReasonCodes, []string{"unclassified_currentness", "missing_node"}) {
+		t.Fatal(got)
+	}
+	if got[1].NodeID != "canon-node:gone" || got[1].Outcome != "excluded" || got[1].ReasonCodes == nil || len(got[1].ReasonCodes) != 0 {
+		t.Fatal(got)
 	}
 }

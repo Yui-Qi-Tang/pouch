@@ -243,6 +243,14 @@ Native response bytes are preserved as `raw_response_base64`, with their exact
 Checks bind the selected policy, roots and returned action mapping. Missing,
 malformed, mismatched or unavailable responses fail closed.
 
+When a check parses but some node is not eligible, `ahe-governance.json` and the
+command output also list `ineligible_nodes`: each non-eligible node's `node_id`,
+`outcome` and the reason codes AHE reported. It is a readable copy derived from
+`assessment`; it neither replaces the raw response nor changes the status. Pouch
+keeps no table of what a code means or what to do next. AHE's
+`docs/CURRENT_USE_GUIDANCE.md`, section "Reason code reference", owns that, for
+example for `unclassified_currentness`.
+
 `accepted=false` becomes `GOVERNANCE_REJECTED`, never UNSAT. An unavailable or
 unusable check becomes `GOVERNANCE_UNAVAILABLE`. Governed `solve` returns exit 2
 for either and exposes both `model_status` and `governance_status`; the bundle's
