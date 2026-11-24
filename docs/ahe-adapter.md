@@ -31,9 +31,18 @@ not replace them. Credentials belong in protected native launcher configuration.
 
 ### Upstream schema changes and re-pinning
 
-The governed workflow targets the public AHE schema 59 / role policy v10 contract.
-New derived reviews require `derivation.use_policy`. Schema 57 endpoint pins do
-not match that contract. Pouch deliberately keeps exact schema matching.
+The governed workflow accepts the public AHE evidence-use projections
+`evidence-use-projection/v1` and `evidence-use-projection/v2` (schema 59 through
+62 / role policy v10 through v12). Any other projection version returns
+`GOVERNANCE_UNAVAILABLE`. Under v2, historical-only derivations are excluded, so
+a basis that depends on one returns `GOVERNANCE_REJECTED`. New derived reviews
+require `derivation.use_policy`. Schema 57 endpoint pins do not match that
+contract. Pouch deliberately keeps exact schema matching.
+
+Schema 62 changed the input schemas of `get_evidence_record`,
+`open_canonical_read_view`, `get_evidence_use_state` and
+`submit_external_source`. Those four Query and intake tools need new operator
+pins; accepting projection v2 does not update them.
 
 1. Upgrade Pouch before attempting a new stage/admission. Updating pins alone
    does not make an older client send `use_policy`.

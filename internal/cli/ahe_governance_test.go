@@ -62,11 +62,18 @@ func TestGovernanceCLIProcess(t *testing.T) {
 					IDs    []string `json:"canonical_ids"`
 				}
 				json.Unmarshal(req.Params.Arguments, &in)
+				outcome, projection := "excluded", "evidence-use-projection/v1"
+				if v := os.Getenv("POUCH_CLI_OUTCOME"); v != "" {
+					outcome = v
+				}
+				if v := os.Getenv("POUCH_CLI_PROJECTION"); v != "" {
+					projection = v
+				}
 				nodes := []any{}
 				for _, id := range in.IDs {
-					nodes = append(nodes, map[string]any{"node_id": id, "outcome": "excluded", "reasons": []any{map[string]string{"code": "withdrawn"}}})
+					nodes = append(nodes, map[string]any{"node_id": id, "outcome": outcome, "reasons": []any{map[string]string{"code": "withdrawn"}}})
 				}
-				data = map[string]any{"assessment": map[string]any{"projection_version": "evidence-use-projection/v1", "state_digest": "evidence-use:sha256:" + strings.Repeat("a", 64), "policy": in.Policy, "evaluated_at": "2026-10-14T00:00:00Z", "roots": in.IDs, "nodes": nodes}}
+				data = map[string]any{"assessment": map[string]any{"projection_version": projection, "state_digest": "evidence-use:sha256:" + strings.Repeat("a", 64), "policy": in.Policy, "evaluated_at": "2026-10-14T00:00:00Z", "roots": in.IDs, "nodes": nodes}}
 			}
 			value = map[string]any{"structuredContent": data, "isError": false}
 		}
@@ -139,6 +146,39 @@ func TestGovernanceCLIStopsBeforeSolver(t *testing.T) {
 	errs.Reset()
 	if code := Run(t.Context(), []string{"ahe-check-sources", "--config", config, "--request", request}, &out, &errs); code != 2 || !strings.Contains(out.String(), ahe.CurrentActionPolicy) {
 		t.Fatal(code, &out, &errs)
+	}
+}
+
+// AHE schema 62 returns projection v2; an unrecognized projection stays
+// unavailable rather than becoming an accept or a reject.
+func TestGovernanceCLIProjectionVersions(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ projection, outcome, status string }{
+		{"evidence-use-projection/v2", "eligible", "GOVERNANCE_ACCEPTED"},
+		{"evidence-use-projection/v2", "excluded", "GOVERNANCE_REJECTED"},
+		{"evidence-use-projection/v3", "eligible", "GOVERNANCE_UNAVAILABLE"},
+	} {
+		t.Run(tc.projection+"/"+tc.outcome, func(t *testing.T) {
+			dir := t.TempDir()
+			pins := map[string]string{}
+			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan"} {
+				pins[name] = validation.Digest([]byte(`{"type":"object"}`))
+			}
+			env := append(os.Environ(), "POUCH_CLI_GOVERNANCE_SERVER=1", "POUCH_CLI_CALLS="+filepath.Join(dir, "calls"), "POUCH_CLI_PROJECTION="+tc.projection, "POUCH_CLI_OUTCOME="+tc.outcome)
+			config := filepath.Join(dir, "config.json")
+			writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: env}, Pins: pins}})
+			request := filepath.Join(dir, "request.json")
+			writeFixtureJSON(t, request, map[string]any{"canonical_ids": []string{"canon-node:basis"}})
+			var out, errs bytes.Buffer
+			code := Run(t.Context(), []string{"ahe-check-sources", "--config", config, "--request", request}, &out, &errs)
+			var check ahe.GovernanceCheck
+			if err := json.Unmarshal(out.Bytes(), &check); err != nil || check.Status != tc.status || (code == 0) != (tc.status == "GOVERNANCE_ACCEPTED") {
+				t.Fatal(code, &out, &errs)
+			}
+		})
 	}
 }
 

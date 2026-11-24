@@ -52,13 +52,13 @@ func governanceStub(policy string, ids []string, actions []ActionBasis, mode str
 	slices.Sort(ids)
 	ids = slices.Compact(ids)
 	nodes := []any{}
-	ok := mode != "withdrawn" && mode != "contradicted" && mode != "source-failed" && mode != "unknown"
+	ok := !slices.Contains([]string{"withdrawn", "contradicted", "source-failed", "unknown", "historical_derivation", "unknown_derivation_use_class"}, mode)
 	for _, id := range ids {
 		outcome := "eligible"
 		if !ok {
 			outcome = "blocked"
 		}
-		if mode == "withdrawn" {
+		if mode == "withdrawn" || mode == "historical_derivation" {
 			outcome = "excluded"
 		}
 		nodes = append(nodes, map[string]any{"node_id": id, "outcome": outcome, "reasons": []any{map[string]string{"code": mode}}})
@@ -70,6 +70,10 @@ func governanceStub(policy string, ids []string, actions []ActionBasis, mode str
 		data["accepted"] = ok
 	}
 	switch mode {
+	case "projection-v2", "historical_derivation", "unknown_derivation_use_class":
+		assessment["projection_version"] = "evidence-use-projection/v2"
+	case "unknown-projection":
+		assessment["projection_version"] = "evidence-use-projection/v3"
 	case "wrong-policy":
 		assessment["policy"] = "historical/v1"
 	case "missing-node":
@@ -134,14 +138,14 @@ func TestBasisManifestBindsCallerInputs(t *testing.T) {
 }
 
 func TestGovernanceFailClosedAndPolicyBinding(t *testing.T) {
-	for _, mode := range []string{"", "withdrawn", "contradicted", "source-failed", "unknown", "wrong-policy", "missing-node", "wrong-root", "missing-time", "missing-accepted", "wrong-mapping", "contradictory-accept"} {
+	for _, mode := range []string{"", "projection-v2", "withdrawn", "contradicted", "source-failed", "unknown", "historical_derivation", "unknown_derivation_use_class", "unknown-projection", "wrong-policy", "missing-node", "wrong-root", "missing-time", "missing-accepted", "wrong-mapping", "contradictory-accept"} {
 		t.Run(mode, func(t *testing.T) {
 			c, _ := testClient(t, mode)
 			q := testProfile(t, c, ProfileQuery, "get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan")
 			a, _ := testAuthority(t)
 			b := fixtureBasis(t, a)
 			check, err := b.CheckActions(t.Context(), q, []string{"set", "reset", "set"})
-			if mode == "" {
+			if mode == "" || mode == "projection-v2" {
 				if err != nil || check.Status != "GOVERNANCE_ACCEPTED" {
 					t.Fatal(check, err)
 				}
@@ -151,7 +155,10 @@ func TestGovernanceFailClosedAndPolicyBinding(t *testing.T) {
 			if check.ResponseSHA256 != validation.Digest(check.Raw) {
 				t.Fatal("raw response not retained")
 			}
-			if slices.Contains([]string{"withdrawn", "contradicted", "source-failed", "unknown"}, mode) && !errors.Is(err, ErrGovernanceRejected) {
+			if slices.Contains([]string{"withdrawn", "contradicted", "source-failed", "unknown", "historical_derivation", "unknown_derivation_use_class"}, mode) && !errors.Is(err, ErrGovernanceRejected) {
+				t.Fatal(err)
+			}
+			if mode == "unknown-projection" && (!errors.Is(err, ErrGovernanceUnavailable) || errors.Is(err, ErrGovernanceRejected)) {
 				t.Fatal(err)
 			}
 		})
@@ -161,6 +168,13 @@ func TestGovernanceFailClosedAndPolicyBinding(t *testing.T) {
 	check, err := CheckSources(t.Context(), q, GroundedActionPolicy, []string{"canon-node:basis"})
 	if err != nil || check.Policy != GroundedActionPolicy {
 		t.Fatal(check, err)
+	}
+	for mode, want := range map[string]string{"projection-v2": "GOVERNANCE_ACCEPTED", "historical_derivation": "GOVERNANCE_REJECTED", "unknown_derivation_use_class": "GOVERNANCE_REJECTED", "unknown-projection": "GOVERNANCE_UNAVAILABLE"} {
+		c, _ := testClient(t, mode)
+		q := testProfile(t, c, ProfileQuery, "get_evidence_use_state")
+		if check, _ := CheckSources(t.Context(), q, CurrentActionPolicy, []string{"canon-node:basis"}); check.Status != want {
+			t.Fatal(mode, check)
+		}
 	}
 }
 

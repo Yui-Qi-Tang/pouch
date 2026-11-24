@@ -125,6 +125,12 @@ type useAssessment struct {
 }
 
 func validPolicy(p string) bool { return p == CurrentActionPolicy || p == GroundedActionPolicy }
+
+// validProjection accepts only known evidence-use projections; v2 (AHE schema
+// 62) adds derivation-use reasons that still map to blocked or excluded nodes.
+func validProjection(v string) bool {
+	return v == "evidence-use-projection/v1" || v == "evidence-use-projection/v2"
+}
 func validDigest(s string) bool {
 	b, err := hex.DecodeString(s)
 	return err == nil && len(b) == 32 && hex.EncodeToString(b) == s
@@ -144,7 +150,7 @@ func canonicalIDs(ids []string) ([]string, error) {
 }
 
 func (a useAssessment) eligible(policy string, roots []string) (bool, error) {
-	if a.ProjectionVersion != "evidence-use-projection/v1" || a.Policy != policy || a.EvaluatedAt.IsZero() || !strings.HasPrefix(a.StateDigest, "evidence-use:sha256:") || !validDigest(strings.TrimPrefix(a.StateDigest, "evidence-use:sha256:")) {
+	if !validProjection(a.ProjectionVersion) || a.Policy != policy || a.EvaluatedAt.IsZero() || !strings.HasPrefix(a.StateDigest, "evidence-use:sha256:") || !validDigest(strings.TrimPrefix(a.StateDigest, "evidence-use:sha256:")) {
 		return false, errors.New("invalid governance assessment identity")
 	}
 	got, err := canonicalIDs(a.Roots)
