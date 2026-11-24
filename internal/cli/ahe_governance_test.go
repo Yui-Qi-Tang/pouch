@@ -16,6 +16,22 @@ import (
 	"github.com/Yui-Qi-Tang/pouch/internal/validation"
 )
 
+// stubContract is a protocol fake of AHE's get_query_contract response.
+var stubContract = map[string]any{
+	"contract":            "ahe-query-contract/v1",
+	"projection_versions": []string{"evidence-use-projection/v1", "evidence-use-projection/v2"},
+	"use_policies":        []string{ahe.CurrentActionPolicy, ahe.GroundedActionPolicy},
+}
+
+func stubContractSHA256(t *testing.T) string {
+	t.Helper()
+	raw, err := json.Marshal(stubContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return validation.Digest(raw)
+}
+
 func TestGovernanceCLIProcess(t *testing.T) {
 	if os.Getenv("POUCH_CLI_GOVERNANCE_SERVER") != "1" {
 		return
@@ -42,7 +58,7 @@ func TestGovernanceCLIProcess(t *testing.T) {
 			value = map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}}
 		case "tools/list":
 			list := []any{}
-			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan"} {
+			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan", "get_query_contract"} {
 				list = append(list, map[string]any{"name": name, "inputSchema": json.RawMessage(`{"type":"object"}`), "annotations": map[string]bool{"readOnlyHint": true}})
 			}
 			value = map[string]any{"tools": list}
@@ -54,7 +70,9 @@ func TestGovernanceCLIProcess(t *testing.T) {
 			f.WriteString(req.Params.Name + "\n")
 			f.Close()
 			var data any
-			if req.Params.Name == "get_evidence_record" {
+			if req.Params.Name == "get_query_contract" {
+				data = stubContract
+			} else if req.Params.Name == "get_evidence_record" {
 				data = map[string]any{"record_ref": map[string]string{"id": "canon-node:basis"}, "canonical_ref": "canon-node:basis", "statement_text": "basis", "admission_outcome": "admitted", "canonical": map[string]string{"node_kind": "source_claim"}}
 			} else {
 				var in struct {
@@ -104,11 +122,11 @@ func TestGovernanceCLIStopsBeforeSolver(t *testing.T) {
 	}
 	calls := filepath.Join(dir, "calls")
 	pins := map[string]string{}
-	for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan"} {
+	for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan", "get_query_contract"} {
 		pins[name] = validation.Digest([]byte(`{"type":"object"}`))
 	}
 	config := filepath.Join(dir, "config.json")
-	writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: append(os.Environ(), "POUCH_CLI_GOVERNANCE_SERVER=1", "POUCH_CLI_CALLS="+calls)}, Pins: pins}})
+	writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: append(os.Environ(), "POUCH_CLI_GOVERNANCE_SERVER=1", "POUCH_CLI_CALLS="+calls)}, Pins: pins, ContractSHA256: stubContractSHA256(t)}})
 	c := validation.Contract{SchemaVersion: validation.Version, RequestID: "cli", SourceBinding: map[string]string{"canon-node:basis": validation.Digest([]byte("basis"))}, Assumptions: map[string]string{}, Model: validation.Model{Fields: map[string][]string{"x": {"0", "1"}}, Forbidden: []validation.State{}, Actions: []validation.Action{{ID: "set", Guard: validation.State{"x": "0"}, Effect: validation.State{"x": "1"}, Frame: []string{}}}}, Start: validation.State{"x": "0"}, Goal: validation.State{"x": "1"}, Baseline: validation.State{"x": "0"}, ForwardLimit: 1, ReturnLimit: 1}
 	authority := filepath.Join(dir, "authority.json")
 	raw := writeFixtureJSON(t, authority, c)
@@ -164,12 +182,12 @@ func TestGovernanceCLIProjectionVersions(t *testing.T) {
 		t.Run(tc.projection+"/"+tc.outcome, func(t *testing.T) {
 			dir := t.TempDir()
 			pins := map[string]string{}
-			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan"} {
+			for _, name := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan", "get_query_contract"} {
 				pins[name] = validation.Digest([]byte(`{"type":"object"}`))
 			}
 			env := append(os.Environ(), "POUCH_CLI_GOVERNANCE_SERVER=1", "POUCH_CLI_CALLS="+filepath.Join(dir, "calls"), "POUCH_CLI_PROJECTION="+tc.projection, "POUCH_CLI_OUTCOME="+tc.outcome)
 			config := filepath.Join(dir, "config.json")
-			writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: env}, Pins: pins}})
+			writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: env}, Pins: pins, ContractSHA256: stubContractSHA256(t)}})
 			request := filepath.Join(dir, "request.json")
 			writeFixtureJSON(t, request, map[string]any{"canonical_ids": []string{"canon-node:basis"}})
 			var out, errs bytes.Buffer
@@ -200,5 +218,40 @@ func TestPlanGateIncludesRecoveryAndBindsArtifacts(t *testing.T) {
 	changed, _ := json.Marshal(bundle.Search)
 	if r.SearchSHA256 == validation.Digest(changed) {
 		t.Fatal("changed plan retained same binding")
+	}
+}
+
+// A contract the operator did not pin stops the command before any governance
+// call and is reported as CONTRACT_MISMATCH, not as unavailable governance.
+func TestGovernanceCLIContractPin(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, pin := range map[string]string{"different pin": validation.Digest([]byte("another contract")), "no pin": ""} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			calls := filepath.Join(dir, "calls")
+			pins := map[string]string{}
+			for _, tool := range []string{"get_evidence_record", "get_evidence_use_state", "check_current_evidence_plan", "get_query_contract"} {
+				pins[tool] = validation.Digest([]byte(`{"type":"object"}`))
+			}
+			config := filepath.Join(dir, "config.json")
+			writeFixtureJSON(t, config, connectionConfig{Query: profileConfig{Command: ahe.Command{Path: exe, Args: []string{"-test.run=^TestGovernanceCLIProcess$"}, Env: append(os.Environ(), "POUCH_CLI_GOVERNANCE_SERVER=1", "POUCH_CLI_CALLS="+calls)}, Pins: pins, ContractSHA256: pin}})
+			request := filepath.Join(dir, "request.json")
+			writeFixtureJSON(t, request, map[string]any{"canonical_ids": []string{"canon-node:basis"}})
+			var out, errs bytes.Buffer
+			code := Run(t.Context(), []string{"ahe-check-sources", "--config", config, "--request", request}, &out, &errs)
+			if code == 0 || strings.Contains(out.String(), "GOVERNANCE_") || strings.Contains(errs.String(), "GOVERNANCE_UNAVAILABLE") {
+				t.Fatal(code, &out, &errs)
+			}
+			if (pin != "") != strings.Contains(errs.String(), "CONTRACT_MISMATCH") {
+				t.Fatal(code, &out, &errs)
+			}
+			raw, _ := os.ReadFile(calls)
+			if strings.Contains(string(raw), "get_evidence_use_state") {
+				t.Fatal("governance was called under an unpinned contract:", string(raw))
+			}
+		})
 	}
 }

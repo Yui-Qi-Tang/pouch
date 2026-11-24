@@ -19,7 +19,7 @@ Profiles have separate allowlists and can use separately authorized subprocesses
 
 | Profile | Public tools |
 |---|---|
-| Query | `get_evidence_record`, `open_canonical_read_view`, `get_evidence_use_state`, `check_current_evidence_plan` |
+| Query | `get_evidence_record`, `open_canonical_read_view`, `get_evidence_use_state`, `check_current_evidence_plan`, `get_query_contract` |
 | Intake | `submit_external_source`, `submit_extractor_output` |
 | Source claim reviewer | `get_source_claim_review`, `admit_reviewed_source_claim` (fixture ingestion) |
 | Endpoint reviewer | `get_endpoint_review`, `admit_reviewed_endpoint` |
@@ -56,9 +56,39 @@ pins; accepting projection v2 does not update them.
    `get_evidence_use_state` and `check_current_evidence_plan`; also pin
    `open_canonical_read_view` when using `ahe-read`. Pin both endpoint tools.
    Reuse unchanged intake pins only after verifying discovery still matches.
+   Also pin `get_query_contract` and set the Query profile's `contract_sha256`
+   (see below).
 5. Run the source check below before modeling. Keep the selected policy fixed
    through the manifest, final check and native review. Never auto-update pins,
    downgrade policy on refusal, or enable a legacy writer as a fallback.
+
+### Contract pin
+
+AHE publishes its version contract through the read-only Query tool
+`get_query_contract` (`ahe-query-contract/v1`: projection versions, use policies,
+expected migration, role policy). Its response is identical for one AHE binary, so
+the Query profile in the operator config pins the SHA-256 of the exact response
+bytes as `contract_sha256`, beside the `inputSchema` pins. Every command that
+connects the Query profile reads the contract first and stops with
+`CONTRACT_MISMATCH` before any governance call when:
+
+- the response bytes differ from the pin; the error names both digests, and the
+  operator reviews the new contract before pinning it;
+- an advertised projection version is not one Pouch parses;
+- either use policy is not offered.
+
+A missing or malformed `contract_sha256` is a configuration error, not a
+mismatch. `CONTRACT_MISMATCH` means the two sides disagree on a published
+version; `GOVERNANCE_UNAVAILABLE` still means a check could not be completed.
+Each governance response keeps its own `projection_version` check. The contract
+describes the AHE binary, not the attached database, and does not cover semantic
+preconditions such as initial lineage registration (see AHE's
+`docs/CURRENT_USE_GUIDANCE.md`).
+
+`internal/ahe/testdata/ahe-golden` holds byte-for-byte copies of AHE's golden
+samples (ahe-mcp commit `3f0ede7`, branch `feat/public-contract-versioning`). The default tests parse them with Pouch's own decoders. They are
+protocol samples, not native database evidence; refresh them from AHE with a new
+recorded source commit when AHE changes a response.
 
 These are local operator configuration changes, not new hardcoded digests in
 Pouch. Historical native receipts and frozen discovery files remain unchanged.

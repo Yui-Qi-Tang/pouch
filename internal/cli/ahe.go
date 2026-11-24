@@ -17,6 +17,9 @@ import (
 type profileConfig struct {
 	Command ahe.Command       `json:"command"`
 	Pins    map[string]string `json:"pins"`
+	// ContractSHA256 pins the exact get_query_contract response. Only the
+	// Query profile uses it, and that profile requires it.
+	ContractSHA256 string `json:"contract_sha256,omitempty"`
 }
 type connectionConfig struct {
 	Query     profileConfig `json:"query"`
@@ -51,6 +54,12 @@ func connect(ctx context.Context, c profileConfig, kind ahe.ProfileKind) (*ahe.C
 	if e != nil {
 		client.Close()
 		return nil, nil, e
+	}
+	if kind == ahe.ProfileQuery {
+		if e := ahe.CheckContract(ctx, p, c.ContractSHA256); e != nil {
+			client.Close()
+			return nil, nil, e
+		}
 	}
 	return client, p, nil
 }
