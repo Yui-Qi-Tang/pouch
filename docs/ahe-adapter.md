@@ -194,6 +194,19 @@ Current-action still rejects recorded failures/unresolved findings, withdrawn
 or superseded bases and active reviewed contradictions. A read is historical,
 not proof of truth or a reusable execution permit.
 
+A source claim admitted through ordinary reviewed admission has no recognized
+currentness: AHE blocks it with `unclassified_currentness`, so the check is
+rejected, and `ineligible_nodes` shows it here, before modeling. It can be
+resolved only outside Pouch, and only when one route's prerequisites hold,
+through one of two separately provisioned AHE reviewer profiles, each with human
+review: `initial-lineage-reviewer` (an unchanged singleton claim; the same claim
+is reassessed) or `supersession-reviewer` (fresh-v2; a new replacement claim is
+assessed instead). Without an eligible reviewed route, current use stops. Pouch
+has no tool for either and only reads the result; an agent must not supply the
+approval. Other record kinds are not covered by these flows. Which route
+applies, its prerequisites and the other reason codes are in the reason code
+reference in AHE's `docs/CURRENT_USE_GUIDANCE.md`.
+
 After declaring the model, supply an independent caller-owned manifest:
 
 ```json
