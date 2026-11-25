@@ -217,6 +217,12 @@ func (a useAssessment) eligible(policy string, roots []string) (bool, error) {
 	return eligible, nil
 }
 
+// invalidInput marks a failure caused by the caller's request, found before AHE
+// was asked. The status stays GOVERNANCE_UNAVAILABLE: nothing was assessed.
+func invalidInput(err error) error {
+	return fmt.Errorf("invalid input: %w", err)
+}
+
 func checkFailure(c GovernanceCheck, err error) (GovernanceCheck, error) {
 	c.Status = "GOVERNANCE_UNAVAILABLE"
 	c.Failure = err.Error()
@@ -241,7 +247,7 @@ func CheckSources(ctx context.Context, query *Profile, policy string, ids []stri
 	c := GovernanceCheck{Tool: "get_evidence_use_state", Policy: policy}
 	roots, err := canonicalIDs(ids)
 	if err != nil {
-		return checkFailure(c, err)
+		return checkFailure(c, invalidInput(err))
 	}
 	if !validPolicy(policy) || query == nil || query.kind != ProfileQuery {
 		return checkFailure(c, ErrCapabilityUnavailable)
@@ -316,7 +322,7 @@ func (b *Basis) CheckActions(ctx context.Context, query *Profile, emitted []stri
 			}
 		}
 		if !found {
-			return checkFailure(c, errors.New("emitted action absent from pinned manifest"))
+			return checkFailure(c, invalidInput(errors.New("emitted action absent from pinned manifest")))
 		}
 	}
 	slices.Sort(roots)

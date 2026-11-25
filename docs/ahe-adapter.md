@@ -265,7 +265,10 @@ keeps no table of what a code means or what to do next. AHE's
 example for `unclassified_currentness`.
 
 `accepted=false` becomes `GOVERNANCE_REJECTED`, never UNSAT. An unavailable or
-unusable check becomes `GOVERNANCE_UNAVAILABLE`. Governed `solve` returns exit 2
+unusable check becomes `GOVERNANCE_UNAVAILABLE`. That status does not say AHE
+was down: a request Pouch refuses before calling AHE, such as more than 64 IDs
+or an emitted action missing from the manifest, also gets it, with a `failure`
+beginning `invalid input:`. Governed `solve` returns exit 2
 for either and exposes both `model_status` and `governance_status`; the bundle's
 model status remains separate, with governance recorded in scope/diagnostics.
 A preflight failure returns before solver setup and retains its report without

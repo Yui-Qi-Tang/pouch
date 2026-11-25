@@ -363,3 +363,34 @@ func TestSourceIDLimitIs64(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A request Pouch refuses itself must not read like an AHE outage, while the
+// status stays GOVERNANCE_UNAVAILABLE.
+func TestInvalidRequestIsNamedInFailure(t *testing.T) {
+	c, calls := testClient(t, "")
+	q := testProfile(t, c, ProfileQuery, "get_evidence_use_state")
+	ids := make([]string, 65)
+	for i := range ids {
+		ids[i] = fmt.Sprintf("canon-node:%03d", i)
+	}
+	check, err := CheckSources(t.Context(), q, CurrentActionPolicy, ids)
+	if !errors.Is(err, ErrGovernanceUnavailable) || check.Status != "GOVERNANCE_UNAVAILABLE" || !strings.HasPrefix(check.Failure, "invalid input: ") {
+		t.Fatal(check.Status, check.Failure, err)
+	}
+	if raw, _ := os.ReadFile(calls); len(raw) != 0 {
+		t.Fatal("invalid request reached AHE")
+	}
+	// An unusable AHE answer is not an input error.
+	c, _ = testClient(t, "unknown-projection")
+	q = testProfile(t, c, ProfileQuery, "get_evidence_use_state", "check_current_evidence_plan", "get_evidence_record")
+	check, err = CheckSources(t.Context(), q, CurrentActionPolicy, []string{"canon-node:basis"})
+	if !errors.Is(err, ErrGovernanceUnavailable) || check.Failure == "" || strings.HasPrefix(check.Failure, "invalid input") {
+		t.Fatal(check.Failure, err)
+	}
+	// An emitted action the manifest does not know is the caller's input.
+	a, _ := testAuthority(t)
+	check, err = fixtureBasis(t, a).CheckActions(t.Context(), q, []string{"no-such-action"})
+	if !errors.Is(err, ErrGovernanceUnavailable) || !strings.HasPrefix(check.Failure, "invalid input: ") {
+		t.Fatal(check.Failure, err)
+	}
+}
