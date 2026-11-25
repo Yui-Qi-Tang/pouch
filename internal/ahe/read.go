@@ -58,7 +58,7 @@ func ReadSnapshot(ctx context.Context, query *Profile, req ReadRequest) (Snapsho
 	if query == nil || query.kind != ProfileQuery {
 		return s, ErrCapabilityUnavailable
 	}
-	if len(req.RootNodeIDs) < 1 || len(req.RootNodeIDs) > 32 || req.MaxDepth < 0 || req.MaxDepth > 8 || req.MaxNodes < 1 || req.MaxNodes > 1024 || req.MaxEdges < 0 || req.MaxEdges > 4096 || (req.MaxDepth > 0 && req.MaxEdges == 0) {
+	if len(req.RootNodeIDs) < 1 || len(req.RootNodeIDs) > maxSourceIDs || req.MaxDepth < 0 || req.MaxDepth > 8 || req.MaxNodes < 1 || req.MaxNodes > 1024 || req.MaxEdges < 0 || req.MaxEdges > 4096 || (req.MaxDepth > 0 && req.MaxEdges == 0) {
 		return s, errors.New("invalid bounded read scope")
 	}
 	roots := slices.Clone(req.RootNodeIDs)

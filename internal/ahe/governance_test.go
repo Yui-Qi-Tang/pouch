@@ -3,6 +3,7 @@ package ahe
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -328,5 +329,37 @@ func TestIneligibleListsOnlyNonEligibleNodes(t *testing.T) {
 	}
 	if got[1].NodeID != "canon-node:gone" || got[1].Outcome != "excluded" || got[1].ReasonCodes == nil || len(got[1].ReasonCodes) != 0 {
 		t.Fatal(got)
+	}
+}
+
+func TestSourceIDLimitIs64(t *testing.T) {
+	ids := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("canon-node:%03d", i)
+		}
+		return out
+	}
+	if got, err := canonicalIDs(ids(64)); err != nil || len(got) != 64 {
+		t.Fatal(len(got), err)
+	}
+	if _, err := canonicalIDs(ids(65)); err == nil {
+		t.Fatal("65 IDs accepted")
+	}
+	// The same bound applies to an assessment's roots, which must match exactly.
+	a := useAssessment{Roots: ids(64)}
+	if got, err := canonicalIDs(a.Roots); err != nil || !slices.Equal(got, ids(64)) {
+		t.Fatal(err)
+	}
+	c, calls := testClient(t, "")
+	q := testProfile(t, c, ProfileQuery, "open_canonical_read_view")
+	if _, err := ReadSnapshot(t.Context(), q, ReadRequest{RootNodeIDs: ids(65), Relations: []string{}, MaxNodes: 65}); err == nil {
+		t.Fatal("65 roots accepted")
+	}
+	if raw, _ := os.ReadFile(calls); len(raw) != 0 {
+		t.Fatal("oversized read reached AHE")
+	}
+	if _, err := ReadSnapshot(t.Context(), q, ReadRequest{RootNodeIDs: ids(64), Relations: []string{}, MaxNodes: 64}); err != nil && strings.Contains(err.Error(), "invalid bounded read scope") {
+		t.Fatal(err)
 	}
 }

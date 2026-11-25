@@ -167,9 +167,14 @@ func validDigest(s string) bool {
 	b, err := hex.DecodeString(s)
 	return err == nil && len(b) == 32 && hex.EncodeToString(b) == s
 }
+
+// maxSourceIDs matches the 64 source bindings an authority may declare. AHE
+// must accept the same count; an older AHE answers with its own error.
+const maxSourceIDs = 64
+
 func canonicalIDs(ids []string) ([]string, error) {
-	if len(ids) < 1 || len(ids) > 32 {
-		return nil, errors.New("1..32 canonical basis IDs required")
+	if len(ids) < 1 || len(ids) > maxSourceIDs {
+		return nil, errors.New("1..64 canonical basis IDs required")
 	}
 	ids = slices.Clone(ids)
 	slices.Sort(ids)

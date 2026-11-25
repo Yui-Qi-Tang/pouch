@@ -223,7 +223,7 @@ After declaring the model, supply an independent caller-owned manifest:
 ```
 
 Every model action, including recovery actions, must appear exactly once with
-1–32 distinct canonical basis IDs drawn from the authority's `source_binding`.
+1–64 distinct canonical basis IDs drawn from the authority's `source_binding`.
 Unknown/missing actions, duplicate bases, unknown policy, ambiguous JSON keys,
 changed hashes and request/authority mismatches are rejected. The manifest must
 explicitly select a policy; omission is not a compatibility default. Declaring
@@ -242,10 +242,10 @@ Pouch checks all authority sources before starting SAT. After search it calls
 `check_current_evidence_plan` for every distinct action emitted in all forward
 and recovery traces, using the pinned mapping. Repeated occurrences of one model
 action share its fixed mapping. There is no union of separate snapshot passes:
-a governed authority has at most 32 sources, Pouch's limit for one native
-request, and all declared action bases fit one final native request. An
-authority with 33–64 sources still runs offline, but loading its
-`--action-basis` fails. This optional mode does not inject provider code into the finite
+a governed authority has at most 64 sources, the same limit as an offline
+authority, and all declared action bases fit one final native request. An AHE
+build that still accepts only 32 IDs refuses a larger request with its own
+error; Pouch does not split it. This optional mode does not inject provider code into the finite
 model or solver. Offline `solve` still works without AHE and claims no AHE check.
 
 The portable output retains exact `action-basis.json` and

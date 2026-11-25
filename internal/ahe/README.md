@@ -39,7 +39,7 @@ discovery is bounded at 32 pages and incoming messages at 16 MiB.
 
 | Field | Meaning / values |
 |---|---|
-| `ReadRequest.RootNodeIDs` | 1–32 distinct IDs starting `canon-node:`, at most 200 bytes each. |
+| `ReadRequest.RootNodeIDs` | 1–64 distinct IDs starting `canon-node:`, at most 200 bytes each. |
 | `ReadRequest.Relations` | Provider relation labels. A nonempty list must match the response scope; empty leaves selection to the provider. No inference of action guards. |
 | `ReadRequest.MaxDepth` | Inclusive requested traversal bound, 0–8. |
 | `ReadRequest.MaxNodes` | Requested node cap, 1–1,024. |
