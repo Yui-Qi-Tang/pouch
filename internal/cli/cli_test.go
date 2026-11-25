@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Yui-Qi-Tang/pouch/internal/ahe"
@@ -141,5 +142,57 @@ func TestSearchTimeoutLeavesTimeToCertify(t *testing.T) {
 	// Certification runs after search, so a finished set check proves it had time.
 	if bundle.Search.Error == "" || bundle.Complete || !bundle.SetCheck.Complete || slices.Contains(bundle.Diagnostics, "REFERENCE_REACHABILITY_INCOMPLETE") {
 		t.Fatalf("search %q, complete %v, set check %+v, diagnostics %v", bundle.Search.Error, bundle.Complete, bundle.SetCheck, bundle.Diagnostics)
+	}
+}
+
+// With --discard-sat-proof a verified SAT query keeps no proof, an UNSAT query
+// keeps and checks its proof, and the result says so.
+func TestSolveDiscardSATProof(t *testing.T) {
+	solver, checker := os.Getenv("POUCH_TEST_CADICAL"), os.Getenv("POUCH_TEST_DRAT_TRIM")
+	if solver == "" || checker == "" {
+		t.Skip("set POUCH_TEST_CADICAL and POUCH_TEST_DRAT_TRIM with their SHA256 pins for real tool integration")
+	}
+	fixture := filepath.Join("..", "..", "testdata", "django-13344")
+	authority := filepath.Join(fixture, "authority.json")
+	raw, err := os.ReadFile(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract validation.Contract
+	if err := json.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "run")
+	var out, errs bytes.Buffer
+	Run(context.Background(), []string{"solve", "--discard-sat-proof", "--authority", authority, "--authority-sha256", validation.Digest(raw), "--request-id", contract.RequestID, "--sources", filepath.Join(fixture, "sources.json"), "--solver", solver, "--solver-sha256", os.Getenv("POUCH_TEST_CADICAL_SHA256"), "--checker", checker, "--checker-sha256", os.Getenv("POUCH_TEST_DRAT_TRIM_SHA256"), "--out", dir}, &out, &errs)
+	saved, err := os.ReadFile(filepath.Join(dir, "bundle.json"))
+	if err != nil {
+		t.Fatalf("%v: %s", err, errs.String())
+	}
+	var bundle run.Bundle
+	if err := json.Unmarshal(saved, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(bundle.EvidenceScope, satProofNote) {
+		t.Fatal(bundle.EvidenceScope)
+	}
+	sawSAT, sawUNSAT := false, false
+	for _, q := range bundle.Search.Queries {
+		_, statErr := os.Stat(filepath.Join(dir, "solver", q.ID, "proof.drat"))
+		switch q.Status {
+		case "SAT":
+			sawSAT = true
+			if statErr == nil {
+				t.Fatalf("SAT query %s kept a proof", q.ID)
+			}
+		case "UNSAT":
+			sawUNSAT = true
+			if statErr != nil || !q.Verified {
+				t.Fatalf("UNSAT query %s: %v verified=%v", q.ID, statErr, q.Verified)
+			}
+		}
+	}
+	if !sawSAT || !sawUNSAT {
+		t.Skipf("fixture gave SAT=%v UNSAT=%v", sawSAT, sawUNSAT)
 	}
 }

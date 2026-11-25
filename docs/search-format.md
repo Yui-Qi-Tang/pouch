@@ -50,7 +50,15 @@ Each query uses a safe generated `qNNNNNN` directory containing the exact
 `input.cnf`, `input.json`, process stdout/stderr and exit records, and
 `outcome.json`. `input.json` carries each variable's meaning in its
 `finite_variable` metadata. SAT adds a checked `assignment.json`; UNSAT retains
-`proof.drat` and checker records. Results saved by earlier versions have
+`proof.drat` and checker records. CaDiCaL also writes `proof.drat` for a SAT
+answer, but nothing checks it: a SAT answer rests on its assignment satisfying
+every clause. `--discard-sat-proof` (`solve` and `solve-automaton`, off by
+default) deletes that unchecked file after the assignment is verified and drops
+it from the saved artifact list and `manifest.json`. UNSAT proofs are always
+kept and checked, and the solver still writes the proof while it runs, so this
+saves disk afterwards, not time or peak space. A result saved with the flag says
+so: `evidence_scope` in a `solve` bundle, and the `SAT_PROOFS_NOT_RETAINED`
+diagnostic in a `solve-automaton` bundle. Results saved by earlier versions have
 `variables.json` and no `input.json` or `outcome.json`.
 Artifact references are relative IDs with exact byte hashes. Process arguments
 use local relative formula/proof names; tool metadata contains no host paths.

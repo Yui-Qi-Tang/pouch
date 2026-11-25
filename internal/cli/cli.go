@@ -118,6 +118,7 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	maxQueries := f.Int("max-queries", 10000, "solver call resource limit")
 	maxOutputBytes := f.Int64("max-output-bytes", 16<<20, "bytes of each solver and checker output stream")
 	maxProofBytes := f.Int64("max-proof-bytes", 64<<20, "bytes of a DRAT proof; a larger proof is not checked")
+	discardSATProof := f.Bool("discard-sat-proof", false, "delete the unchecked DRAT proof of each verified SAT query; UNSAT proofs are kept")
 	if e := f.Parse(args); e != nil {
 		return 2
 	}
@@ -201,7 +202,7 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, e)
 		return 2
 	}
-	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout, MaxOutputBytes: *maxOutputBytes, MaxProofBytes: *maxProofBytes})
+	runner, e := sat.New(sat.Config{SolverPath: *solver, SolverSHA256: *solverHash, CheckerPath: *checker, CheckerSHA256: *checkerHash, ArtifactDir: filepath.Join(*dir, "solver"), Timeout: *queryTimeout, MaxOutputBytes: *maxOutputBytes, MaxProofBytes: *maxProofBytes, DiscardSATProof: *discardSATProof})
 	if e != nil {
 		fmt.Fprintln(errout, e)
 		return 2
@@ -212,6 +213,9 @@ func solve(ctx context.Context, args []string, out, errout io.Writer) int {
 	bundle, certErr := run.Certify(ctx, in, result, *dir)
 	bundle.EvidenceMatrix = evidence.EvidenceMatrix
 	bundle.EvidenceScope = evidence.EvidenceScope
+	if *discardSATProof {
+		bundle.EvidenceScope += "; " + satProofNote
+	}
 	var governanceErr error
 	if governed {
 		check, err := basis.CheckActions(ctx, query, emittedActions(result))
@@ -414,3 +418,7 @@ func render(args []string, out, errout io.Writer) error {
 	}
 	return output(out, map[string]string{"status": "RENDERED", "verification": "saved claims only; no re-verification"})
 }
+
+// satProofNote qualifies results saved with --discard-sat-proof. A SAT answer is
+// accepted because its assignment satisfied every clause, not because of a proof.
+const satProofNote = "SAT proofs not retained (--discard-sat-proof): SAT answers rest on the checked assignment; UNSAT proofs kept and checked"

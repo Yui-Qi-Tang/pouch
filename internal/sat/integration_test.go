@@ -161,3 +161,58 @@ func TestExistingAuthorityFixtures(t *testing.T) {
 		})
 	}
 }
+
+func TestDiscardSATProofKeepsUNSATProof(t *testing.T) {
+	solver, checker := os.Getenv("POUCH_TEST_CADICAL"), os.Getenv("POUCH_TEST_DRAT_TRIM")
+	if solver == "" || checker == "" {
+		t.Skip("set POUCH_TEST_CADICAL and POUCH_TEST_DRAT_TRIM with their SHA256 pins for real tool integration")
+	}
+	dir := filepath.Join(t.TempDir(), "evidence")
+	runner, err := sat.New(sat.Config{SolverPath: solver, SolverSHA256: os.Getenv("POUCH_TEST_CADICAL_SHA256"), CheckerPath: checker, CheckerSHA256: os.Getenv("POUCH_TEST_DRAT_TRIM_SHA256"), ArtifactDir: dir, DiscardSATProof: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := validation.Contract{SchemaVersion: validation.Version, RequestID: "drop-sat-proof", SourceBinding: map[string]string{"synthetic:rules": strings.Repeat("a", 64)}, Assumptions: map[string]string{}, Model: validation.Model{Fields: map[string][]string{"a": {"0", "1"}, "b": {"0", "1"}}, Forbidden: []validation.State{}, Actions: []validation.Action{
+		{ID: "a-on", Guard: validation.State{"a": "0"}, Effect: validation.State{"a": "1"}, Frame: []string{"b"}},
+		{ID: "b-on", Guard: validation.State{"b": "0"}, Effect: validation.State{"b": "1"}, Frame: []string{"a"}},
+		{ID: "a-off", Guard: validation.State{"a": "1"}, Effect: validation.State{"a": "0"}, Frame: []string{"b"}},
+		{ID: "b-off", Guard: validation.State{"b": "1"}, Effect: validation.State{"b": "0"}, Frame: []string{"a"}},
+	}}, Start: validation.State{"a": "0", "b": "0"}, Goal: validation.State{"a": "1", "b": "1"}, Baseline: validation.State{"a": "0", "b": "0"}, ForwardLimit: 3, ReturnLimit: 2}
+	result, err := planning.Search(context.Background(), c, runner, planning.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Complete || len(result.Forward) != 2 {
+		t.Fatalf("bad search result %+v", result)
+	}
+	sawSAT, sawUNSAT := false, false
+	for _, q := range result.Queries {
+		if !q.Verified {
+			t.Fatalf("unverified query %+v", q)
+		}
+		_, statErr := os.Stat(filepath.Join(dir, q.ID, "proof.drat"))
+		listed := false
+		for _, a := range q.Artifacts {
+			raw, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(a.ID)))
+			if err != nil || validation.Digest(raw) != a.SHA256 || int64(len(raw)) != a.Bytes {
+				t.Fatalf("listed artifact %s is missing or changed: %v", a.ID, err)
+			}
+			listed = listed || strings.HasSuffix(a.ID, "/proof.drat")
+		}
+		switch q.Status {
+		case "SAT":
+			sawSAT = true
+			if statErr == nil || listed {
+				t.Fatalf("SAT query %s kept its proof", q.ID)
+			}
+		case "UNSAT":
+			sawUNSAT = true
+			if statErr != nil || !listed {
+				t.Fatalf("UNSAT query %s lost its proof", q.ID)
+			}
+		}
+	}
+	if !sawSAT || !sawUNSAT {
+		t.Fatal("test needs both SAT and UNSAT queries")
+	}
+}

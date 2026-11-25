@@ -6,6 +6,10 @@ package sat
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/Yui-Qi-Tang/calx/digest"
@@ -31,11 +35,17 @@ type Config struct {
 	MaxClauses    int
 	MaxLiterals   int
 	MaxInputBytes int
+	// DiscardSATProof removes proof.drat after a SAT answer whose assignment
+	// passed the model check. The proof is only checked for UNSAT, so nothing
+	// verifies it for SAT. UNSAT and unverified results keep every file.
+	DiscardSATProof bool
 }
 
 // Runner keeps private pinned tool copies and never overwrites query evidence.
 type Runner struct {
 	tools *cadical.Runner
+	root  string
+	drop  bool
 }
 
 // New verifies exact executable hashes and creates a fresh private directory.
@@ -53,7 +63,11 @@ func New(c Config) (*Runner, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Runner{tools: tools}, nil
+	root, err := filepath.Abs(c.ArtifactDir)
+	if err != nil {
+		return nil, err
+	}
+	return &Runner{tools: tools, root: root, drop: c.DiscardSATProof}, nil
 }
 
 // Solve preserves the formula, proof, process logs and assignment before
@@ -76,7 +90,23 @@ func (r *Runner) Solve(ctx context.Context, id string, cnf calxsat.CNF) (plannin
 	}
 	result.Assignment = solved.Assignment
 	result.Verified = true
+	if r.drop && solved.Status == calxsat.SAT {
+		if err := r.discardProof(id, &result); err != nil {
+			return result, err
+		}
+	}
 	return result, nil
+}
+
+// discardProof deletes the unused SAT proof and drops it from the artifact list,
+// so the sealed manifest does not name a missing file.
+func (r *Runner) discardProof(id string, result *planning.SolveResult) error {
+	if err := os.Remove(filepath.Join(r.root, id, "proof.drat")); err != nil {
+		return err
+	}
+	name := id + "/proof.drat"
+	result.Artifacts = slices.DeleteFunc(result.Artifacts, func(a planning.Artifact) bool { return strings.EqualFold(a.ID, name) })
+	return nil
 }
 
 // portable reduces a Calx error to its category. Its messages can name host

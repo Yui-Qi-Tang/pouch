@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -72,6 +73,72 @@ func TestSolveAutomatonWithPinnedTools(t *testing.T) {
 	}
 	if bundle.Status != "FOUND" || !bundle.ForwardVerified || bundle.RecoveryStatus != "NO_RETURN_IN_MODEL" || !bundle.Complete {
 		t.Fatalf("%+v", bundle)
+	}
+}
+
+// A SAT query keeps no proof when asked, an UNSAT query keeps it, and the sealed
+// manifest names exactly the files left on disk.
+func TestSolveAutomatonDiscardSATProof(t *testing.T) {
+	solver, checker := os.Getenv("POUCH_TEST_CADICAL"), os.Getenv("POUCH_TEST_DRAT_TRIM")
+	if solver == "" || checker == "" {
+		t.Skip("set POUCH_TEST_CADICAL and POUCH_TEST_DRAT_TRIM with their SHA256 pins for real tool integration")
+	}
+	dir, digest := automatonInputs(t)
+	result := filepath.Join(dir, "result")
+	var out, errs bytes.Buffer
+	if got := Run(context.Background(), []string{"solve-automaton", "--discard-sat-proof", "--authority", filepath.Join(dir, "authority.json"), "--authority-sha256", digest, "--request-id", "merge", "--sources", filepath.Join(dir, "sources.json"), "--out", result, "--solver", solver, "--solver-sha256", os.Getenv("POUCH_TEST_CADICAL_SHA256"), "--checker", checker, "--checker-sha256", os.Getenv("POUCH_TEST_DRAT_TRIM_SHA256")}, &out, &errs); got != 0 {
+		t.Fatalf("exit %d: %s", got, errs.String())
+	}
+	raw, err := os.ReadFile(filepath.Join(result, "bundle.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bundle automata.Bundle
+	if err := json.Unmarshal(raw, &bundle); err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Status != "FOUND" || !bundle.ForwardVerified || !bundle.Complete || !slices.Contains(bundle.Diagnostics, "SAT_PROOFS_NOT_RETAINED") {
+		t.Fatalf("%+v", bundle)
+	}
+	var manifest struct {
+		Files []struct {
+			ID     string `json:"id"`
+			SHA256 string `json:"sha256"`
+		} `json:"files"`
+	}
+	raw, err = os.ReadFile(filepath.Join(result, "manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	listed := map[string]bool{}
+	for _, f := range manifest.Files {
+		got, err := os.ReadFile(filepath.Join(result, filepath.FromSlash(f.ID)))
+		if err != nil || validation.Digest(got) != f.SHA256 {
+			t.Fatalf("manifest entry %s: %v", f.ID, err)
+		}
+		listed[f.ID] = true
+	}
+	sawSAT, sawUNSAT := false, false
+	for _, q := range bundle.Search.Queries {
+		_, statErr := os.Stat(filepath.Join(result, "solver", q.ID, "proof.drat"))
+		switch q.Status {
+		case "SAT":
+			sawSAT = true
+			if statErr == nil || listed["solver/"+q.ID+"/proof.drat"] {
+				t.Fatalf("SAT query %s kept a proof", q.ID)
+			}
+		case "UNSAT":
+			sawUNSAT = true
+			if statErr != nil || !listed["solver/"+q.ID+"/proof.drat"] {
+				t.Fatalf("UNSAT query %s lost its proof", q.ID)
+			}
+		}
+	}
+	if !sawSAT || !sawUNSAT {
+		t.Skip("fixture needs both SAT and UNSAT queries")
 	}
 }
 

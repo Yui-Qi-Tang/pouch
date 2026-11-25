@@ -217,6 +217,8 @@ pouch automaton-verify \
 
 The result directory holds `index.html`, an offline replay, and `bundle.json`. In the bundle, `search.forward.states` and `search.return.trace.states` are bit strings to decode with the layout above, `search.deterministic` says whether the system has choices, and each entry of `choices` holds that step's choice bits. Budgets are `--max-queries`, `--max-variables`, `--max-clauses`, `--max-literals`, `--max-input-bytes`, `--max-output-bytes`, `--max-proof-bytes` and `--max-orbit-steps`; exceeding one gives `INCONCLUSIVE`. Every length up to the answer is a separate query, so keep limits small: a 206-step return took 218 queries.
 
+On a machine with little disk, `--discard-sat-proof` (on `solve` and `solve-automaton`) deletes the unchecked proof of each verified SAT query. UNSAT proofs stay, and the result says the flag was used; it saves disk afterwards, not time.
+
 Read `status`, `recovery_status` and `reason` separately. An `UNKNOWN` recovery exits 2 from `solve-automaton` even when the forward run is verified; `RETURN_EXISTS_BEYOND_SEARCH_BOUND`, `ORBIT_NOT_CLOSED` and `CHOICES_NOT_ENUMERATED` do not establish that no return exists. `automaton-verify` recomputes the conclusions from the authority without rerunning the solver or checking saved proofs; its `walk_checked` is false when length claims rest on recorded queries, as with choices. It can pass a result whose recovery is `UNKNOWN`, so read its fields rather than its exit code alone. Steps count model updates and make no claim about a real fluid.
 
 ## 3. Interpret the actual JSON
